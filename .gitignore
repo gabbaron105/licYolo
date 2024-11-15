@@ -1,0 +1,14 @@
+# Ignore YOLO model files
+yolov5m.pt
+yolov5s.pt
+
+# Ignore virtual environment folder
+venv/
+
+# Ignore compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore output or result folders
+wyniki/
