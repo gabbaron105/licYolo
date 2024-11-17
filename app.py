@@ -5,6 +5,8 @@ import os
 from flask import Flask, request, jsonify, Response
 import cv2
 import time
+from lost_objects_tracker import LostObjectsTracker
+
 
 
 app = Flask(__name__)
@@ -54,12 +56,14 @@ def predict():
     return jsonify(all_detections)
 
 
+
+
 @app.route('/detect_video', methods=['POST'])
 def detect_video():
     data = request.get_json()
     video_url = data.get("video_url")
-    target_classes = data.get("target_classes")  # Classes of interest for detailed logging and frame saving
-    ignored_classes = data.get("ignored_classes")  # Classes to completely ignore
+    target_classes = data.get("target_classes")  # Klasy docelowe
+    ignored_classes = data.get("ignored_classes")  # Klasy ignorowane
 
     if not video_url:
         return jsonify({"error": "No video URL provided"}), 400
@@ -68,27 +72,43 @@ def detect_video():
     if ignored_classes is not None and not isinstance(ignored_classes, list):
         return jsonify({"error": "Invalid ignored classes. Provide a list of class IDs."}), 400
 
-    # Open video stream from the provided URL
+    # Otwórz strumień wideo
     cap = cv2.VideoCapture(video_url)
     if not cap.isOpened():
         return jsonify({"error": "Failed to open video stream"}), 400
 
     fps = cap.get(cv2.CAP_PROP_FPS)
-    frames_interval = int(fps // 4)  # Process frames at this interval for detections
-
+    frames_interval = int(fps // 4)  # Przetwarzanie co `frames_interval` klatek
     frame_count = 0
 
-    # Open files for logging
+    # Inicjalizacja trackera zgubionych obiektów
+    tracker = LostObjectsTracker(max_lost_time=5, color_threshold=0.7)
+
+
     with open("wyniki/target_detections.txt", "a") as target_file, open("wyniki/general_detections.txt", "a") as general_file:
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
 
-            # Process only every `frames_interval`-th frame
+            # Przetwarzaj tylko co `frames_interval` klatkę
             if frame_count % frames_interval == 0:
-                # Pass the current frame, target, and ignored classes for processing
-                process_frame(frame, frame_count, target_file, general_file, target_classes, ignored_classes)
+                # Uzyskaj detekcje
+                detections = process_frame(
+                    frame, frame_count, target_file, general_file, target_classes, ignored_classes
+                )
+                lost_objects = tracker.get_lost_objects()
+                for lost_obj in lost_objects:
+                    tracker.save_lost_frame(frame, lost_obj)
+
+                # Aktualizuj tracker zgubionych obiektów
+                tracker.update_tracker(detections, frame_count, fps, frame)
+
+
+                # Sprawdź zgubione obiekty i zapisz je
+                lost_objects = tracker.get_lost_objects()
+                for obj in lost_objects:
+                    tracker.save_lost_frame(frame, obj)
 
             frame_count += 1
 
@@ -96,10 +116,11 @@ def detect_video():
     return jsonify({"status": "Processing complete"}), 200
 
 
+
 def process_frame(frame, frame_count, target_file, general_file, target_classes, ignored_classes=None):
     """
     Processes the detections for the given frame and writes them to separate files.
-    Target classes trigger image saves and specific logging, while other non-ignored classes are logged elsewhere.
+    Also returns the detections for further processing.
 
     Parameters:
     frame (numpy.ndarray): The frame from the video.
@@ -108,6 +129,9 @@ def process_frame(frame, frame_count, target_file, general_file, target_classes,
     general_file (file): File handle for general detections (non-target, non-ignored).
     target_classes (list): The classes of interest for detailed logging and frame saving.
     ignored_classes (list): Classes to ignore entirely.
+
+    Returns:
+    list: List of detections as dictionaries.
     """
     # Convert the frame to RGB for YOLOv5
     img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -145,6 +169,9 @@ def process_frame(frame, frame_count, target_file, general_file, target_classes,
         general_list = general_detections.to_dict(orient="records")
         print(f"Frame {frame_count}: General detections logged.")
         general_file.write(f"Frame {frame_count}: {general_list}\n")
+
+    # Return detections as a list of dictionaries
+    return detections.to_dict(orient="records")
 
 
 
