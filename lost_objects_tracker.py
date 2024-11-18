@@ -1,3 +1,5 @@
+
+from datetime import datetime
 import cv2
 import os
 import numpy as np
@@ -116,13 +118,8 @@ class LostObjectsTracker:
                 self.lost_objects.append(lost_obj)
                 del self.tracked_objects[obj_id]
 
-    def get_lost_objects(self):
-        """
-        Pobiera listę zgubionych obiektów i resetuje listę.
-        """
-        lost_objects = self.lost_objects.copy()
-        self.lost_objects = []
-        return lost_objects
+                # Natychmiast zapisz zgubiony obiekt
+                self.save_lost_frame(current_frame, lost_obj)
 
     def save_lost_frame(self, frame, obj):
         """
@@ -157,7 +154,6 @@ Klasa obiektu: {obj['class']}
 Pewność detekcji: {obj['confidence']:.2f}
 Numer klatki: {obj['last_seen_frame']}
 Czas zgubienia: {obj['lost_time']}
-Kolor: {obj['color_hist']}
 Współrzędne obiektu: 
     X_min: {xmin}
     Y_min: {ymin}

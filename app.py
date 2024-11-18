@@ -2,7 +2,7 @@ import torch
 from PIL import Image
 import io
 import os
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify
 import cv2
 import time
 from lost_objects_tracker import LostObjectsTracker
@@ -84,7 +84,6 @@ def detect_video():
     # Inicjalizacja trackera zgubionych obiektów
     tracker = LostObjectsTracker(max_lost_time=5, color_threshold=0.7)
 
-
     with open("wyniki/target_detections.txt", "a") as target_file, open("wyniki/general_detections.txt", "a") as general_file:
         while cap.isOpened():
             ret, frame = cap.read()
@@ -97,18 +96,9 @@ def detect_video():
                 detections = process_frame(
                     frame, frame_count, target_file, general_file, target_classes, ignored_classes
                 )
-                lost_objects = tracker.get_lost_objects()
-                for lost_obj in lost_objects:
-                    tracker.save_lost_frame(frame, lost_obj)
 
-                # Aktualizuj tracker zgubionych obiektów
+                # Aktualizuj tracker zgubionych obiektów (zgubione zapisywane automatycznie)
                 tracker.update_tracker(detections, frame_count, fps, frame)
-
-
-                # Sprawdź zgubione obiekty i zapisz je
-                lost_objects = tracker.get_lost_objects()
-                for obj in lost_objects:
-                    tracker.save_lost_frame(frame, obj)
 
             frame_count += 1
 
