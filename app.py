@@ -9,6 +9,9 @@ from datetime import datetime
 import random
 from datetime import datetime
 import random
+import numpy as np
+
+
 
 
 
@@ -63,16 +66,35 @@ def predict():
 
 
 
+def get_dominant_color(image, bbox):
+    """
+    Oblicza dominujący kolor w regionie bounding box.
+    :param image: Obraz w formacie numpy (np. klatka z OpenCV)
+    :param bbox: Bounding box (słownik z 'xmin', 'ymin', 'xmax', 'ymax')
+    :return: Kolor w formacie heksadecymalnym (np. '#RRGGBB')
+    """
+    xmin, ymin, xmax, ymax = bbox['xmin'], bbox['ymin'], bbox['xmax'], bbox['ymax']
+    region = image[ymin:ymax, xmin:xmax]
+
+    # Jeśli bounding box jest za mały, zwróć stały kolor
+    if region.size == 0:
+        return "#000000"  # Czarny jako fallback
+
+    # Przekształć region na tablicę 2D z kolorami RGB
+    region = region.reshape(-1, 3)
+
+    # Oblicz średnią wartość koloru
+    mean_color = np.mean(region, axis=0).astype(int)
+    r, g, b = mean_color[2], mean_color[1], mean_color[0]  # OpenCV używa BGR
+    return f"#{r:02x}{g:02x}{b:02x}"
 
 
-from datetime import datetime
-import random
 
 @app.route('/detect_video', methods=['POST'])
 def detect_video():
     data = request.get_json()
     video_url = data.get("video_url")
-    ignored_classes = data.get("ignored_classes", [])  # Lista klas do ignorowania
+    ignored_classes = data.get("ignored_classes", [])  
 
     if not video_url:
         return jsonify({"error": "No video URL provided"}), 400
@@ -87,12 +109,9 @@ def detect_video():
     if not os.path.exists("wyniki"):
         os.makedirs("wyniki")
 
-    model.conf = 0.1  # Obniżony próg pewności detekcji
+    model.conf = 0.38  #pewności detekcji
 
-    # Funkcja generująca losowy kolor
-    def random_color():
-        return f"#{random.randint(0, 255):02x}{random.randint(0, 255):02x}{random.randint(0, 255):02x}"
-
+   
     with open("wyniki/general_detections.txt", "w", encoding="utf-8") as general_file:
         while cap.isOpened():
             ret, frame = cap.read()
@@ -120,7 +139,15 @@ def detect_video():
 
                 # Przetwarzanie każdej detekcji
                 for _, detection in detections.iterrows():
-                    color = random_color()  # Losowy kolor dla każdego obiektu
+                     # Oblicz środek (centroid) detekcji
+                    xmin, ymin, xmax, ymax = int(detection['xmin']), int(detection['ymin']), int(detection['xmax']), int(detection['ymax'])
+                    bbox = {"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax}
+                    center_x = (xmin + xmax) // 2
+                    center_y = (ymin + ymax) // 2
+
+                    # Przykład koloru (możesz dodać logikę generowania koloru)
+                    color = get_dominant_color(frame, bbox)
+
                     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Znacznik czasu
                     name = detection['name'] if 'name' in detection else f"class_{detection['class']}"  # Nazwa klasy
 
@@ -129,10 +156,14 @@ def detect_video():
                         "name": name,
                         "confidence": round(detection['confidence'], 2),
                         "bbox": {
-                            "xmin": int(detection['xmin']),
-                            "ymin": int(detection['ymin']),
-                            "xmax": int(detection['xmax']),
-                            "ymax": int(detection['ymax']),
+                            "xmin": xmin,
+                            "ymin": ymin,
+                            "xmax": xmax,
+                            "ymax": ymax,
+                        },
+                        "center": {  # Współrzędne środka
+                            "x": center_x,
+                            "y": center_y
                         },
                         "color": color,
                         "timestamp": timestamp
