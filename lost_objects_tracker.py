@@ -179,4 +179,4 @@ def monitor_file(input_file, output_file, delta_color_threshold=50):
 
 
 if __name__ == "__main__":
-    monitor_file('back/main/wyniki/general_detections.txt', 'zgubione.txt')
+    monitor_file('back/main/wyniki/general_detections.txt', 'back/main/zgubione.txt')

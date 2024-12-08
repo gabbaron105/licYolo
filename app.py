@@ -10,7 +10,7 @@ import random
 from datetime import datetime
 import random
 import numpy as np
-
+import json
 
 
 
@@ -28,41 +28,19 @@ model = torch.hub.load('ultralytics/yolov5', 'yolov5m', pretrained=True)
 def home():
     return "Flask server is running!"
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    # Sprawdź, czy w żądaniu są pliki
-    if 'file' not in request.files and 'files' not in request.files:
-        return jsonify({'error': 'No file(s) provided'}), 400
-    
-    # Lista na wyniki dla każdego obrazu
-    all_detections = []
 
-    # Obsługa przypadku pojedynczego obrazu
-    if 'file' in request.files:
-        files = [request.files['file']]  # Zmieniamy pojedynczy plik na listę z jednym elementem
-    else:
-        # Obsługa przypadku wielu obrazów
-        files = request.files.getlist('files')
 
-    # Przejdź przez wszystkie przesłane pliki (jedno- lub wielokrotne)
-    for file in files:
-        # Odczytaj plik jako bajty i przekształć w obraz PIL
-        img_bytes = file.read()
-        img = Image.open(io.BytesIO(img_bytes))
-
-        # Wykonaj predykcję na obrazie
-        results = model(img)
-        detections = results.pandas().xyxy[0].to_dict(orient="records")
-
-        # Dodaj wyniki dla obrazu do listy wyników
-        all_detections.append({
-            'filename': file.filename,  # Nazwa pliku
-            'detections': detections    # Wykryte obiekty dla tego obrazu
-        })
-
-    # Zwróć wszystkie wykrycia jako JSON
-    return jsonify(all_detections)
-
+def read_file():
+    try:
+        with open("zgubione.txt", 'r') as file:
+            data = file.readlines()
+        # Parsowanie linii do słownika
+        parsed_data = {line.split(": ", 1)[0]: json.loads(line.split(": ", 1)[1]) for line in data}
+        return parsed_data
+    except FileNotFoundError:
+        return {}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 
@@ -186,6 +164,23 @@ def detect_video():
     return jsonify({"status": "Processing complete"}), 200
 
 
+@app.route('/get-all', methods=['GET'])
+def get_all():
+    data = read_file()
+    if "error" in data:
+        return jsonify({"error": data["error"]}), 500
+    return jsonify(data)
+
+
+# Endpoint do odczytu elementów według klasy
+@app.route('/get-by-class/<class_name>', methods=['GET'])
+def get_by_class(class_name):
+    data = read_file()
+    if "error" in data:
+        return jsonify({"error": data["error"]}), 500
+    
+    filtered_data = {key: value for key, value in data.items() if value["name"] == class_name}
+    return jsonify(filtered_data)
 
 
 
