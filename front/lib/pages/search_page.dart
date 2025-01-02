@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import '../components/tiles_component.dart';
 import 'details_page.dart'; // Import the new details page
+import '../api_conf/DetectedItem.dart' as api; // Import the API service with alias
+import '../components/tiles_component.dart'; // Import the tiles component
 
 class SearchPage extends StatefulWidget {
+  const SearchPage({super.key});
+
   @override
   _SearchPageState createState() => _SearchPageState();
 }
@@ -10,23 +13,37 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  List<api.DetectedItem> allItems = [];
+  bool isLoading = true;
 
-  final List<Map<String, String>> allItems = [
-    {'title': 'Item 1', 'subtitle': 'All Data'},
-    {'title': 'Item 2', 'subtitle': 'All Data'},
-    {'title': 'Item 3', 'subtitle': 'All Data'},
-    {'title': 'Item 4', 'subtitle': 'All Data'},
-    {'title': 'Item 5', 'subtitle': 'All Data'},
-    {'title': 'Item 6', 'subtitle': 'All Data'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    fetchData();
+  }
 
-  List<Map<String, String>> get _filteredItems {
+  Future<void> fetchData() async {
+    try {
+      final items = await api.ApiService.fetchAllItems();
+      setState(() {
+        allItems = items;
+        isLoading = false;
+      });
+      print('Data fetched successfully: ${items.length} items');
+    } catch (e) {
+      print('Failed to load data: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  List<api.DetectedItem> get _filteredItems {
     if (_searchQuery.isEmpty) {
       return allItems;
     } else {
       return allItems
-          .where((item) =>
-              item['title']!.toLowerCase().contains(_searchQuery.toLowerCase()))
+          .where((item) => item.name.toLowerCase().contains(_searchQuery.toLowerCase()))
           .toList();
     }
   }
@@ -38,69 +55,17 @@ class _SearchPageState extends State<SearchPage> {
         title: Text('Search'),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.12),
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 6.0,
-                      offset: Offset(2, 2),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    suffixIcon: IconButton(
-                      icon: Icon(Icons.search),
-                      onPressed: () {
-                        setState(() {
-                          _searchQuery = _searchController.text;
-                        });
-                      },
-                    ),
-                  ),
-                  onSubmitted: (query) {
-                    setState(() {
-                      _searchQuery = query;
-                    });
-                  },
-                ),
-              ),
-              SizedBox(height: 60), // Increased space between search bar and first tile
-              ListView.builder(
-                shrinkWrap: true,
-                physics: ClampingScrollPhysics(), // Enable scrolling
-                itemCount: _filteredItems.length,
-                itemBuilder: (context, index) {
-                  final tile = _filteredItems[index];
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DetailsPage(
-                            title: tile['title']!,
-                            subtitle: tile['subtitle']!,
-                          ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      margin: EdgeInsets.symmetric(vertical: 8.0),
-                      padding: EdgeInsets.all(16.0),
-                      width: double.infinity,
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.12),
+                      padding: EdgeInsets.symmetric(horizontal: 16.0),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12.0),
@@ -112,28 +77,53 @@ class _SearchPageState extends State<SearchPage> {
                           ),
                         ],
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            tile['title']!,
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons.search),
+                            onPressed: () {
+                              setState(() {
+                                _searchQuery = _searchController.text;
+                              });
+                            },
                           ),
-                          SizedBox(height: 4),
-                          Text(
-                            tile['subtitle']!,
-                            style: TextStyle(fontSize: 14, color: Colors.grey),
-                          ),
-                        ],
+                        ),
+                        onSubmitted: (query) {
+                          setState(() {
+                            _searchQuery = query;
+                          });
+                        },
                       ),
                     ),
-                  );
-                },
+                    SizedBox(height: 60), // Increased space between search bar and first tile
+                    TilesComponent(
+                      tilesData: _filteredItems.map((item) {
+                        return {
+                          'title': item.name,
+                          'subtitle': item.color,
+                        };
+                      }).toList(),
+                      onTileClick: (title, subtitle) {
+                        final clickedItem = allItems.firstWhere((item) => item.name == title);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DetailsPage(
+                              title: title,
+                              subtitle: 'Confidence: ${clickedItem.confidence.toStringAsFixed(2)}',
+                              itemDetails: clickedItem,
+                            ),
+                          ),
+                        );
+                      },
+                      widthPercentage: 0.5,
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

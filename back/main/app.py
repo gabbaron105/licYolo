@@ -1,34 +1,24 @@
+from flask_cors import CORS
 import torch
 from PIL import Image
 import io
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 import cv2
 from collections import defaultdict
 from datetime import datetime
 import random
-from datetime import datetime
-import random
 import numpy as np
 import json
-
-
-
-
-
 
 app = Flask(__name__)
 
 # Załaduj model YOLOv5 (pretrained)
 model = torch.hub.load('ultralytics/yolov5', 'yolov5m', pretrained=True)
 
-
-
 @app.route('/')
 def home():
     return "Flask server is running!"
-
-
 
 def read_file():
     try:
@@ -41,8 +31,6 @@ def read_file():
         return {}
     except Exception as e:
         return {"error": str(e)}
-
-
 
 def get_dominant_color(image, bbox):
     """
@@ -66,8 +54,6 @@ def get_dominant_color(image, bbox):
     r, g, b = mean_color[2], mean_color[1], mean_color[0]  # OpenCV używa BGR
     return f"#{r:02x}{g:02x}{b:02x}"
 
-
-
 @app.route('/detect_video', methods=['POST'])
 def detect_video():
     data = request.get_json()
@@ -89,7 +75,6 @@ def detect_video():
 
     model.conf = 0.38  #pewności detekcji
 
-   
     with open("wyniki/general_detections.txt", "w", encoding="utf-8") as general_file:
         while cap.isOpened():
             ret, frame = cap.read()
@@ -163,14 +148,12 @@ def detect_video():
     cap.release()
     return jsonify({"status": "Processing complete"}), 200
 
-
 @app.route('/get-all', methods=['GET'])
 def get_all():
     data = read_file()
     if "error" in data:
         return jsonify({"error": data["error"]}), 500
     return jsonify(data)
-
 
 # Endpoint do odczytu elementów według klasy
 @app.route('/get-by-class/<class_name>', methods=['GET'])
@@ -182,8 +165,15 @@ def get_by_class(class_name):
     filtered_data = {key: value for key, value in data.items() if value["name"] == class_name}
     return jsonify(filtered_data)
 
-
-
+# Endpoint do pobierania obrazu na podstawie numeru klatki
+@app.route('/get-frame/<int:frame_number>', methods=['GET'])
+def get_frame(frame_number):
+    image_path = f"wyniki/frame_{frame_number}.jpg"
+    if os.path.exists(image_path):
+        return send_file(image_path, mimetype='image/jpeg')
+    else:
+        print(f"Frame {frame_number} not found at path: {image_path}")  # Debug print
+        return jsonify({"error": "Frame not found"}), 404
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    CORS(app.run(debug=True))
