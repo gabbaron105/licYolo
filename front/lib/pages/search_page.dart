@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'details_page.dart'; // Import the new details page
 import '../api_conf/DetectedItem.dart' as api; // Import the API service with alias
 import '../components/tiles_component.dart'; // Import the tiles component
+import '../components/custom_navbar.dart'; // Import the custom navigation bar
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -15,6 +16,7 @@ class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
   List<api.DetectedItem> allItems = [];
   bool isLoading = true;
+  int _currentIndex = 1;
 
   @override
   void initState() {
@@ -98,32 +100,43 @@ class _SearchPageState extends State<SearchPage> {
                       ),
                     ),
                     SizedBox(height: 60), // Increased space between search bar and first tile
-                    TilesComponent(
-                      tilesData: _filteredItems.map((item) {
-                        return {
-                          'title': item.name,
-                          'subtitle': item.color,
-                        };
-                      }).toList(),
-                      onTileClick: (title, subtitle) {
-                        final clickedItem = allItems.firstWhere((item) => item.name == title);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => DetailsPage(
-                              title: title,
-                              subtitle: 'Confidence: ${clickedItem.confidence.toStringAsFixed(2)}',
-                              itemDetails: clickedItem,
+                    SizedBox(
+                      height: 500, // Adjust the height as needed
+                      child: TilesComponent(
+                        tilesData: _filteredItems.map((item) {
+                          return {
+                            'title': item.name,
+                            'subtitle': item.color,
+                          };
+                        }).toList(),
+                        onTileClick: (title, subtitle) {
+                          final clickedItem = allItems.firstWhere((item) => item.name == title);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DetailsPage(
+                                title: title,
+                                subtitle: 'Confidence: ${clickedItem.confidence.toStringAsFixed(2)}',
+                                itemDetails: clickedItem,
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                      widthPercentage: 0.5,
+                          );
+                        },
+                        widthPercentage: 0.5,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
+      bottomNavigationBar: CustomNavBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
     );
   }
 }

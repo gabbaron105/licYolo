@@ -63,9 +63,20 @@ def detect_video():
     if not video_url:
         return jsonify({"error": "No video URL provided"}), 400
 
+    # Debug: Print the video URL
+    print(f"Video URL: {video_url}")
+
+    # Remove 'file://' prefix if it exists
+    if video_url.startswith('file://'):
+        video_url = video_url[7:]
+
+    # Debug: Print the modified video URL
+    print(f"Modified Video URL: {video_url}")
+
     # Otwórz strumień wideo
     cap = cv2.VideoCapture(video_url)
     if not cap.isOpened():
+        print(f"Failed to open video stream: {video_url}")  # Debug print
         return jsonify({"error": "Failed to open video stream"}), 400
 
     frame_count = 0
@@ -177,3 +188,4 @@ def get_frame(frame_number):
 
 if __name__ == '__main__':
     CORS(app.run(debug=True))
+

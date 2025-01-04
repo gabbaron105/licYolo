@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:front/pages/profile_page.dart';
 import '../components/tiles_component.dart';
 import '../components/custom_navbar.dart'; // Import the custom navigation bar
 import 'details_page.dart'; // Import the new details page
@@ -64,7 +65,7 @@ class _HomePageState extends State<HomePage> {
     final List<Widget> pages = [
       _HomeContent(allItems: allItems, selectedClasses: selectedClasses),
       const SearchPage(),
-      const Center(child: Text('Profile Screen', style: TextStyle(fontSize: 24))),
+      const ProfilePage(),
     ];
 
     return Scaffold(
@@ -144,24 +145,27 @@ class _HomeContent extends StatelessWidget {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            TilesComponent(
-              tilesData: filteredCategories,
-              onTileClick: (title, subtitle) {
-                final classNumber = categoryClassMap[title];
-                final filteredItems = allItems.where((item) => item.objectClass == classNumber).toList();
-                print('Filtered items for $title: ${filteredItems.length} items'); // Debug print
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => FilteredItemsPage(
-                      title: title,
-                      items: filteredItems,
+            SizedBox(
+              height: 670, // Adjust the height as needed
+              child: TilesComponent(
+                tilesData: filteredCategories,
+                onTileClick: (title, subtitle) {
+                  final classNumber = categoryClassMap[title];
+                  final filteredItems = allItems.where((item) => item.objectClass == classNumber).toList();
+                  print('Filtered items for $title: ${filteredItems.length} items'); // Debug print
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FilteredItemsPage(
+                        title: title,
+                        items: filteredItems,
+                      ),
                     ),
-                  ),
-                );
-              },
-              widthPercentage: 0.5,
-              displayIcons: true, // Display icons on the home page
+                  );
+                },
+                widthPercentage: 0.5,
+                displayIcons: true, 
+              ),
             ),
           ],
         ),

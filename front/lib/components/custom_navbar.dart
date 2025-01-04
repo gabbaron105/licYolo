@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../pages/home_page.dart';
+import '../pages/search_page.dart';
+import '../pages/profile_page.dart'; // Import the profile page
 
 class CustomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -29,7 +32,33 @@ class CustomNavBar extends StatelessWidget {
       ),
       child: BottomNavigationBar(
         currentIndex: currentIndex,
-        onTap: onTap,
+        onTap: (index) {
+          onTap(index);
+          // Navigate to the respective page
+          switch (index) {
+            case 0:
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => HomePage()),
+                (route) => false,
+              );
+              break;
+            case 1:
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => SearchPage()),
+                (route) => false,
+              );
+              break;
+            case 2:
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => ProfilePage()),
+                (route) => false,
+              );
+              break;
+          }
+        },
         backgroundColor: Colors.transparent,
         elevation: 0,
         items: [

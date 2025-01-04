@@ -18,7 +18,7 @@ class DetailsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.keyboard_arrow_left_rounded, size: 32), // Increased icon size
+          icon: Icon(Icons.keyboard_arrow_left_rounded, size: 32),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -30,16 +30,60 @@ class DetailsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 18, color: Colors.grey),
+            // Title at the top
+            Center(
+              child: Text(
+                title,
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
             ),
             SizedBox(height: 20),
+            // Information card
+            Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 3,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Confidence: ${itemDetails.confidence}',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          'Color: ${itemDetails.color}',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        SizedBox(width: 8),
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: _getColorFromHex(itemDetails.color),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      'Timestamp: ${itemDetails.timestamp}',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    Text(
+                      'Frame: ${itemDetails.frame}',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 20),
+            // Image with bounding box inside a border
             FutureBuilder<String>(
               future: _fetchFrameImageUrl(itemDetails.frame),
               builder: (context, snapshot) {
@@ -48,53 +92,36 @@ class DetailsPage extends StatelessWidget {
                 } else if (snapshot.hasError) {
                   return Center(child: Text('Failed to load image'));
                 } else {
-                  return Column(
-                    children: [
-                      Container(
-                        width: MediaQuery.of(context).size.width * 0.5,
-                        height: MediaQuery.of(context).size.width * 0.5 * 9 / 16, // Maintain aspect ratio
-                        child: CustomPaint(
-                          painter: BoundingBoxPainter(
-                            imageUrl: snapshot.data!,
-                            bbox: itemDetails.bbox,
-                          ),
+                  return Container(
+                    margin: EdgeInsets.symmetric(
+                        horizontal: MediaQuery.of(context).size.width * 0.1), // 10% margin
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey, width: 2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.all(8.0),
+                    child: SizedBox(
+                      // Adjusting the height to extend as per your requirement
+                      height: MediaQuery.of(context).size.width,
+                      width: MediaQuery.of(context).size.width * 0.6,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.network(
+                              snapshot.data!,
+                              fit: BoxFit.contain,
+                            ),
+                            CustomPaint(
+                              painter: BoundingBoxPainter(
+                                bbox: itemDetails.bbox,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      SizedBox(height: 20),
-                      Text(
-                        'Class: ${itemDetails.objectClass}',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      Text(
-                        'Confidence: ${itemDetails.confidence}',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      Row(
-                        children: [
-                          Text(
-                            'Color: ${itemDetails.color}',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                          SizedBox(width: 10),
-                          Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: _getColorFromHex(itemDetails.color),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        'Timestamp: ${itemDetails.timestamp}',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      Text(
-                        'Frame: ${itemDetails.frame}',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    ],
+                    ),
                   );
                 }
               },
@@ -103,7 +130,7 @@ class DetailsPage extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: CustomNavBar(
-        currentIndex: 0, // Set the appropriate index for the details page
+        currentIndex: 0,
         onTap: (index) {
           // Handle navigation if needed
         },
@@ -114,7 +141,7 @@ class DetailsPage extends StatelessWidget {
   Color _getColorFromHex(String hexColor) {
     hexColor = hexColor.replaceAll("#", "");
     if (hexColor.length == 6) {
-      hexColor = "FF" + hexColor;
+      hexColor = "FF$hexColor";
     }
     if (hexColor.length == 8) {
       return Color(int.parse("0x$hexColor"));
@@ -124,10 +151,9 @@ class DetailsPage extends StatelessWidget {
 }
 
 class BoundingBoxPainter extends CustomPainter {
-  final String imageUrl;
   final api.Bbox bbox;
 
-  BoundingBoxPainter({required this.imageUrl, required this.bbox});
+  BoundingBoxPainter({required this.bbox});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -136,30 +162,23 @@ class BoundingBoxPainter extends CustomPainter {
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 
-    final imageRect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final bboxRect = Rect.fromLTWH(
-      bbox.xmin.toDouble() * size.width / 640, // Assuming original image width is 640
-      bbox.ymin.toDouble() * size.height / 360, // Assuming original image height is 360
-      (bbox.xmax - bbox.xmin).toDouble() * size.width / 640,
-      (bbox.ymax - bbox.ymin).toDouble() * size.height / 360,
-    );
+    // Calculate the scaling factors based on the actual dimensions of the displayed image
+    final double scaleX = size.width / 640; // Assuming original image width is 640
+    final double scaleY = size.height / 360; // Assuming original image height is 360
 
-    final image = NetworkImage(imageUrl);
-    image.resolve(ImageConfiguration()).addListener(
-      ImageStreamListener((ImageInfo info, bool _) {
-        final resizedImage = info.image;
-        final resizedWidth = resizedImage.width * 0.5;
-        final resizedHeight = resizedImage.height * 0.5;
-        final resizedRect = Rect.fromLTWH(0, 0, resizedWidth.toDouble(), resizedHeight.toDouble());
+    // Scale the bounding box coordinates
+    final double xmin = bbox.xmin.toDouble() * scaleX;
+    final double ymin = bbox.ymin.toDouble() * scaleY;
+    final double xmax = bbox.xmax.toDouble() * scaleX;
+    final double ymax = bbox.ymax.toDouble() * scaleY;
 
-        canvas.drawImageRect(resizedImage, imageRect, resizedRect, Paint());
-        canvas.drawRect(bboxRect, paint);
-      }),
-    );
+    final bboxRect = Rect.fromLTRB(xmin, ymin, xmax, ymax);
+
+    canvas.drawRect(bboxRect, paint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
+    return true;
   }
 }
