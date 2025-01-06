@@ -19,7 +19,7 @@ class _FilteredItemsPageState extends State<FilteredItemsPage> {
 
   @override
   Widget build(BuildContext context) {
-    print('Displaying ${widget.items.length} items for category ${widget.title}'); // Debug print
+    print('Displaying ${widget.items.length} items for category ${widget.title}');
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -27,23 +27,34 @@ class _FilteredItemsPageState extends State<FilteredItemsPage> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SizedBox(
-          height: 500, // Adjust the height as needed
+          height: 550,
           child: TilesComponent(
             tilesData: widget.items.map((item) {
               return {
-                'title': item.name,
-                'subtitle': item.color,
+                'title': item.name ?? 'Unknown Name',
+                'subtitle': item.color ?? '#000000',
               };
             }).toList(),
             onTileClick: (title, subtitle) {
-              final clickedItem = widget.items.firstWhere((item) => item.name == title);
+              final clickedItem = widget.items.firstWhere(
+                (item) => item.name == title && item.color == subtitle,
+                orElse: () => api.DetectedItem(
+                  itemID: '0', // Use itemID
+                  objectClass: 0,
+                  bbox: api.Bbox(xmin: 0.0, ymin: 0.0, xmax: 0.0, ymax: 0.0),
+                  center: api.Center(x: 0.0, y: 0.0),
+                  confidence: 0.0,
+                  frame: 0,
+                  color: '#000000',
+                  name: 'Unknown',
+                  timestamp: DateTime.now(),
+                ),
+              );
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => DetailsPage(
-                    title: title,
-                    subtitle: 'Confidence: ${clickedItem.confidence.toStringAsFixed(2)}',
-                    itemDetails: clickedItem,
+                    itemId: clickedItem.itemID, // Use itemID instead of id
                   ),
                 ),
               );

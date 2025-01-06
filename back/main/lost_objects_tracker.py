@@ -6,7 +6,7 @@ import math
 
 
 class ObjectTracker:
-    def __init__(self, delta_color_threshold=50):
+    def __init__(self, delta_color_threshold=150):
         """
         Inicjalizuje tracker z limitem podobieństwa kolorów.
         :param delta_color_threshold: Maksymalna akceptowalna różnica między kolorami.
@@ -32,10 +32,10 @@ class ObjectTracker:
         return math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2)
 
     def is_similar_color(self, color1, color2):
-       
-        #Sprawdza, czy dwa kolory są podobne w granicach tolerancji.
-        
-        return self.color_distance(color1, color2) <= self.delta_color_threshold
+        distance = self.color_distance(color1, color2)
+        print(f"[DEBUG] Comparing {color1} and {color2} - Distance: {distance}, Threshold: {self.delta_color_threshold}")
+        return distance <= self.delta_color_threshold
+
 
     def generate_object_name(self, obj_class):
         """
@@ -62,19 +62,18 @@ class ObjectTracker:
             for existing_name, existing_obj in self.objects.items():
                 if existing_name.startswith(obj_class):  # Dopasowanie klasy
                     if self.is_similar_color(existing_obj['color'], obj_color):  # Dopasowanie koloru
-                        # Aktualizuj istniejący obiekt
+                        print(f"[DEBUG] Match found: {existing_name} for color {obj_color}")
                         obj['frame'] = frame_number
                         self.objects[existing_name] = obj
-                        print(f"[LOG] Updated object: {existing_name} (frame: {frame_number}, color similar)")
                         matched = True
                         break
 
-            # Jeśli nie znaleziono pasującego obiektu, dodaj nowy
             if not matched:
+                print(f"[DEBUG] No match for object {obj_class} with color {obj_color}")
                 new_object_name = self.generate_object_name(obj_class)
                 obj['frame'] = frame_number
                 self.objects[new_object_name] = obj
-                print(f"[LOG] Added new object: {new_object_name} (frame: {frame_number})")
+
 
     def get_all_objects(self):
         """
@@ -114,7 +113,7 @@ def write_to_txt_file(output_file, data):
         print(f"[ERROR] Failed to write to {output_file}: {e}")
 
 
-def monitor_file(input_file, output_file, delta_color_threshold=50):
+def monitor_file(input_file, output_file, delta_color_threshold):
     """
     Monitoruje plik wejściowy i zapisuje dane do pliku wynikowego.
     """
@@ -179,4 +178,4 @@ def monitor_file(input_file, output_file, delta_color_threshold=50):
 
 
 if __name__ == "__main__":
-    monitor_file('back/main/wyniki/general_detections.txt', 'back/main/zgubione.txt')
+    monitor_file('back/main/wyniki/general_detections.txt', 'back/main/zgubione.txt',delta_color_threshold=100)

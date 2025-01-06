@@ -110,14 +110,12 @@ class _SearchPageState extends State<SearchPage> {
                           };
                         }).toList(),
                         onTileClick: (title, subtitle) {
-                          final clickedItem = allItems.firstWhere((item) => item.name == title);
+                          final clickedItem = allItems.firstWhere((item) => item.name == title && item.color == subtitle);
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => DetailsPage(
-                                title: title,
-                                subtitle: 'Confidence: ${clickedItem.confidence.toStringAsFixed(2)}',
-                                itemDetails: clickedItem,
+                                itemId: clickedItem.itemID, 
                               ),
                             ),
                           );

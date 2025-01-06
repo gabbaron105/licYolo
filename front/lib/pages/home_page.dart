@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:front/pages/profile_page.dart';
 import '../components/tiles_component.dart';
 import '../components/custom_navbar.dart'; // Import the custom navigation bar
-import 'details_page.dart'; // Import the new details page
 import 'search_page.dart'; // Import the new search page
 import 'filtered_items_page.dart'; // Import the filtered items page
 import '../api_conf/DetectedItem.dart' as api; // Import the API service with alias
@@ -130,9 +129,31 @@ class _HomeContent extends StatelessWidget {
     };
 
     final filteredCategories = categoryClassMap.entries
-        .where((entry) => selectedClasses.contains(entry.value))
-        .map((entry) => {'title': entry.key, 'subtitle': 'Icon: ${entry.key.toLowerCase()}'})
-        .toList();
+    .where((entry) => selectedClasses.contains(entry.value))
+    .map((entry) {
+      final item = allItems.firstWhere(
+        (item) => item.objectClass == entry.value,
+        orElse: () => api.DetectedItem(
+          itemID: '0', // Use itemID
+          objectClass: entry.value,
+          bbox: api.Bbox(xmin: 0.0, ymin: 0.0, xmax: 0.0, ymax: 0.0), // Default bounding box
+          center: api.Center(x: 0.0, y: 0.0), // Default center
+          confidence: 0.0, // Default confidence
+          frame: 0, // Default frame
+          color: '#000000', // Default color if no item is found
+          name: 'Unknown', // Default name
+          timestamp: DateTime.now(), // Default timestamp
+        ),
+      );
+      print('Filtered category: ${entry.key}, Item: ${item.name}'); // Debug print
+      return {
+        'title': entry.key,
+        'subtitle': 'Icon: ${entry.key.toLowerCase()}',
+        'id': entry.key,
+        'color': item.color,
+      };
+    }).toList();
+
 
     return SingleChildScrollView(
       child: Padding(

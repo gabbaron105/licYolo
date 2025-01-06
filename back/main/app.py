@@ -164,9 +164,12 @@ def get_all():
     data = read_file()
     if "error" in data:
         return jsonify({"error": data["error"]}), 500
+    
+    # Debug: Print the item IDs
+    print(f"Item IDs: {list(data.keys())}")
+    
     return jsonify(data)
 
-# Endpoint do odczytu elementów według klasy
 @app.route('/get-by-class/<class_name>', methods=['GET'])
 def get_by_class(class_name):
     data = read_file()
@@ -185,6 +188,25 @@ def get_frame(frame_number):
     else:
         print(f"Frame {frame_number} not found at path: {image_path}")  # Debug print
         return jsonify({"error": "Frame not found"}), 404
+
+# Endpoint do pobierania detali konkretnego przedmiotu
+@app.route('/get-item-details/<string:item_id>', methods=['GET'])
+def get_item_details(item_id):
+    data = read_file()
+    if "error" in data:
+        return jsonify({"error": data["error"]}), 500
+
+    # Debug: Print the item ID and data keys
+    print(f"Requested item ID: {item_id}")
+    print(f"Available item IDs: {list(data.keys())}")
+
+    # Search for the item by its unique identifier
+    item_details = data.get(item_id)
+
+    if item_details:
+        return jsonify(item_details)
+    else:
+        return jsonify({"error": "Item not found"}), 404
 
 if __name__ == '__main__':
     CORS(app.run(debug=True))

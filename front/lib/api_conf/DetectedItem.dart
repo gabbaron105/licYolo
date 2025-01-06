@@ -6,10 +6,17 @@ class ApiService {
 
   // Fetch all items and parse to DetectedItem objects
   static Future<List<DetectedItem>> fetchAllItems() async {
-    final response = await http.get(Uri.parse('$baseUrl/get-all'));
+    final url = '$baseUrl/get-all';
+    print('Fetching all items from: $url'); // Debug print
+    final response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
+      print('Response body: ${response.body}'); // Debug print
       final Map<String, dynamic> jsonData = json.decode(response.body);
-      return parseDetectedItems(jsonData);
+      final items = jsonData.entries.map((entry) => DetectedItem.fromJson(entry.value, entry.key)).toList();
+      items.forEach((item) {
+        print('ItemID: ${item.itemID}'); // Print itemID
+      });
+      return items;
     } else {
       throw Exception('Failed to load items');
     }
@@ -17,10 +24,13 @@ class ApiService {
 
   // Fetch items by class name and parse to DetectedItem objects
   static Future<List<DetectedItem>> fetchItemsByClass(String className) async {
-    final response = await http.get(Uri.parse('$baseUrl/get-by-class/$className'));
+    final url = '$baseUrl/get-by-class/$className';
+    print('Fetching items by class from: $url'); // Debug print
+    final response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
+      print('Response body: ${response.body}'); // Debug print
       final Map<String, dynamic> jsonData = json.decode(response.body);
-      return parseDetectedItems(jsonData);
+      return jsonData.entries.map((entry) => DetectedItem.fromJson(entry.value, entry.key)).toList();
     } else {
       throw Exception('Failed to load items by class');
     }
@@ -28,24 +38,33 @@ class ApiService {
 
   // Fetch frame image by frame number
   static Future<String> fetchFrameImage(int frameNumber) async {
-    final response = await http.get(Uri.parse('$baseUrl/get-frame/$frameNumber'));
+    final url = '$baseUrl/get-frame/$frameNumber';
+    print('Fetching frame image from: $url'); // Debug print
+    final response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
-      return '$baseUrl/get-frame/$frameNumber';
+      return url;
     } else {
       throw Exception('Failed to load frame image');
     }
   }
 
-  // Helper function to parse JSON into DetectedItem objects
-  static List<DetectedItem> parseDetectedItems(Map<String, dynamic> json) {
-    return json.entries.map((entry) {
-      return DetectedItem.fromJson(entry.key, entry.value);
-    }).toList();
+  // Fetch item details by item ID
+  static Future<DetectedItem> fetchItemDetails(String itemId) async {
+    final url = '$baseUrl/get-item-details/$itemId';
+    print('Fetching item details from: $url'); // Debug print
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      print('Response body: ${response.body}'); // Debug print
+      final Map<String, dynamic> jsonData = json.decode(response.body);
+      return DetectedItem.fromJson(jsonData, itemId); // Ensure itemId is passed correctly
+    } else {
+      throw Exception('Failed to load item details');
+    }
   }
 }
 
 class DetectedItem {
-  final String id;
+  final String itemID; 
   final Bbox bbox;
   final Center center;
   final int objectClass;
@@ -56,7 +75,7 @@ class DetectedItem {
   final DateTime timestamp;
 
   DetectedItem({
-    required this.id,
+    required this.itemID,
     required this.bbox,
     required this.center,
     required this.objectClass,
@@ -67,26 +86,26 @@ class DetectedItem {
     required this.timestamp,
   });
 
-  factory DetectedItem.fromJson(String id, Map<String, dynamic> json) {
+  factory DetectedItem.fromJson(Map<String, dynamic> json, String itemID) {
     return DetectedItem(
-      id: id,
-      bbox: Bbox.fromJson(json['bbox']),
-      center: Center.fromJson(json['center']),
-      objectClass: json['class'],
-      color: json['color'],
-      confidence: json['confidence'],
-      frame: json['frame'],
-      name: json['name'],
-      timestamp: DateTime.parse(json['timestamp']),
+      itemID: itemID, // Use itemID
+      bbox: Bbox.fromJson(json['bbox'] ?? {}),
+      center: Center.fromJson(json['center'] ?? {}),
+      objectClass: json['class'] ?? 0,
+      color: json['color'] ?? '#000000',
+      confidence: (json['confidence'] ?? 0.0).toDouble(),
+      frame: json['frame'] ?? 0,
+      name: json['name'] ?? 'Unknown',
+      timestamp: DateTime.parse(json['timestamp'] ?? DateTime.now().toIso8601String()),
     );
   }
 }
 
 class Bbox {
-  final int xmin;
-  final int xmax;
-  final int ymin;
-  final int ymax;
+  final double xmin;
+  final double xmax;
+  final double ymin;
+  final double ymax;
 
   Bbox({
     required this.xmin,
@@ -97,17 +116,17 @@ class Bbox {
 
   factory Bbox.fromJson(Map<String, dynamic> json) {
     return Bbox(
-      xmin: json['xmin'],
-      xmax: json['xmax'],
-      ymin: json['ymin'],
-      ymax: json['ymax'],
+      xmin: (json['xmin'] ?? 0.0).toDouble(),
+      xmax: (json['xmax'] ?? 0.0).toDouble(),
+      ymin: (json['ymin'] ?? 0.0).toDouble(),
+      ymax: (json['ymax'] ?? 0.0).toDouble(),
     );
   }
 }
 
 class Center {
-  final int x;
-  final int y;
+  final double x;
+  final double y;
 
   Center({
     required this.x,
@@ -116,8 +135,8 @@ class Center {
 
   factory Center.fromJson(Map<String, dynamic> json) {
     return Center(
-      x: json['x'],
-      y: json['y'],
+      x: (json['x'] ?? 0.0).toDouble(),
+      y: (json['y'] ?? 0.0).toDouble(),
     );
   }
 }

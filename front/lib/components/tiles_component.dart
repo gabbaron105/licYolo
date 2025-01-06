@@ -43,19 +43,26 @@ class TilesComponent extends StatelessWidget {
                 child: displayIcons
                     ? Icon(
                         _getIconData(tile['title']!),
-                        size: 48, // Adjust the icon size as needed
+                        size: 48, 
                       )
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            tile['title']!,
+                            '${tile['title'] ?? ''} (ID: ${tile['id'] ?? ''})',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           SizedBox(height: 4),
-                          Text(
-                            tile['subtitle']!,
-                            style: TextStyle(fontSize: 14, color: Colors.grey),
+                          Container(
+                            padding: EdgeInsets.all(4.0),
+                            decoration: BoxDecoration(
+                              color: Color(int.parse(tile['color']?.replaceAll('#', '0xff') ?? '0xff000000')),
+                              borderRadius: BorderRadius.circular(4.0),
+                            ),
+                            child: Text(
+                              tile['color'] ?? '',
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
                           ),
                         ],
                       ),
