@@ -1,7 +1,8 @@
 # Ignore YOLO model files
 **/yolov5m.pt
 **/yolov5s.pt
-
+**/yolov5x6.pt
+**/yolov5l6.pt
 # Ignore virtual environment folder
 /back/venv/
 

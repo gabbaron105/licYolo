@@ -11,22 +11,20 @@ class ObjectTracker:
         Inicjalizuje tracker z limitem podobieństwa kolorów.
         :param delta_color_threshold: Maksymalna akceptowalna różnica między kolorami.
         """
-        self.objects = {}  # Słownik: { "dog_1": {...}, "dog_2": {...} }
+        self.objects = {}  
         self.delta_color_threshold = delta_color_threshold
 
     @staticmethod
     def hex_to_rgb(hex_color):
         """
-        Konwertuje kolor w formacie heksadecymalnym (#RRGGBB) na tuple RGB.
+        Konwertuj kolor
         """
         hex_color = hex_color.lstrip('#')
         return tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
 
     @staticmethod
     def color_distance(color1, color2):
-        """
-        Oblicza różnicę euklidesową między dwoma kolorami w przestrzeni RGB.
-        """
+        
         r1, g1, b1 = ObjectTracker.hex_to_rgb(color1)
         r2, g2, b2 = ObjectTracker.hex_to_rgb(color2)
         return math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2)
@@ -38,16 +36,12 @@ class ObjectTracker:
 
 
     def generate_object_name(self, obj_class):
-        """
-        Generuje unikalną nazwę dla obiektu, np. 'dog_1', 'dog_2'.
-        """
+        
         existing_keys = [key for key in self.objects.keys() if key.startswith(obj_class)]
         return f"{obj_class}_{len(existing_keys) + 1}"
 
     def process_frame(self, frame_data, frame_number):
-        """
-        Przetwarza dane z klatki, uwzględniając klasę i kolor z tolerancją.
-        """
+        
         print(f"[LOG] Processing frame {frame_number}: {frame_data}")
         for obj in frame_data:
             obj_class = obj.get('name')
@@ -57,11 +51,10 @@ class ObjectTracker:
                 print("[WARNING] Object without 'name' or 'color' ignored.")
                 continue
 
-            # Sprawdź wszystkie istniejące obiekty tej klasy
             matched = False
             for existing_name, existing_obj in self.objects.items():
-                if existing_name.startswith(obj_class):  # Dopasowanie klasy
-                    if self.is_similar_color(existing_obj['color'], obj_color):  # Dopasowanie koloru
+                if existing_name.startswith(obj_class):  
+                    if self.is_similar_color(existing_obj['color'], obj_color): 
                         print(f"[DEBUG] Match found: {existing_name} for color {obj_color}")
                         obj['frame'] = frame_number
                         self.objects[existing_name] = obj
@@ -84,11 +77,7 @@ class ObjectTracker:
 
 
 def fix_json_line(line):
-    """
-    Naprawia błędnie sformatowany JSON:
-    - Dodaje podwójne cudzysłowy wokół kluczy.
-    - Zamienia pojedyncze cudzysłowy na podwójne.
-    """
+
     try:
         print(f"[LOG] Original line before fixing: {line.strip()}")
         line = re.sub(r"(?<!\\)'", '"', line)
@@ -114,9 +103,6 @@ def write_to_txt_file(output_file, data):
 
 
 def monitor_file(input_file, output_file, delta_color_threshold):
-    """
-    Monitoruje plik wejściowy i zapisuje dane do pliku wynikowego.
-    """
     tracker = ObjectTracker(delta_color_threshold=delta_color_threshold)
     file_position = 0
 
@@ -125,13 +111,11 @@ def monitor_file(input_file, output_file, delta_color_threshold):
 
     while True:
         try:
-            # Sprawdź, czy plik wejściowy istnieje
             if not input_path.exists():
                 print(f"[WARNING] Input file {input_file} not found. Waiting...")
                 time.sleep(10)
                 continue
 
-            # Czytaj nowe linie z pliku wejściowego
             with input_path.open('r') as file:
                 file.seek(file_position)
                 new_lines = file.readlines()
@@ -146,34 +130,32 @@ def monitor_file(input_file, output_file, delta_color_threshold):
                 try:
                     if ': ' in line:
                         raw_data = line.strip().split(': ', 1)[1]
-                        fixed_data = fix_json_line(raw_data)  # Napraw dane
-                        frame_data = json.loads(fixed_data)  # Parsowanie JSON
-                        tracker.process_frame(frame_data, frame_number)  # Aktualizuj stan
+                        fixed_data = fix_json_line(raw_data) 
+                        frame_data = json.loads(fixed_data)  
+                        tracker.process_frame(frame_data, frame_number) 
                     else:
                         print(f"[WARNING] Invalid line format ignored: {line.strip()}")
                 except (json.JSONDecodeError, IndexError) as e:
                     print(f"[ERROR] Error parsing line: {line.strip()} -> {e}")
 
-            # Usuń plik wynikowy, jeśli istnieje
+            # Usuń plik jeśli istnieje
             if output_path.exists():
                 try:
                     output_path.unlink()
                 except Exception as e:
                     print(f"[ERROR] Failed to delete old output file: {e}")
-                    continue  # Kontynuuj pętlę, jeśli usuwanie nie powiedzie się
+                    continue  
 
-            # Zapisz pełny stan obiektów do nowego pliku
             all_objects = tracker.get_all_objects()
             try:
                 write_to_txt_file(output_file, all_objects)
             except Exception as e:
                 print(f"[ERROR] Failed to write to output file: {e}")
-                continue  # Pomijamy tę iterację
+                continue  
 
         except Exception as e:
             print(f"[ERROR] Unexpected error: {e}")
 
-        # Oczekuj na nowe dane
         time.sleep(2)
 
 

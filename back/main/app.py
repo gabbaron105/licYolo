@@ -13,8 +13,8 @@ import json
 
 app = Flask(__name__)
 
-# Załaduj model YOLOv5 (pretrained)
-model = torch.hub.load('ultralytics/yolov5', 'yolov5m', pretrained=True)
+
+model = torch.hub.load('ultralytics/yolov5', 'yolov5x6', pretrained=True)
 
 @app.route('/')
 def home():
@@ -24,7 +24,6 @@ def read_file():
     try:
         with open("zgubione.txt", 'r') as file:
             data = file.readlines()
-        # Parsowanie linii do słownika
         parsed_data = {line.split(": ", 1)[0]: json.loads(line.split(": ", 1)[1]) for line in data}
         return parsed_data
     except FileNotFoundError:
@@ -34,7 +33,6 @@ def read_file():
 
 def get_dominant_color(image, bbox):
     """
-    Oblicza dominujący kolor w regionie bounding box.
     :param image: Obraz w formacie numpy (np. klatka z OpenCV)
     :param bbox: Bounding box (słownik z 'xmin', 'ymin', 'xmax', 'ymax')
     :return: Kolor w formacie heksadecymalnym (np. '#RRGGBB')
@@ -42,16 +40,14 @@ def get_dominant_color(image, bbox):
     xmin, ymin, xmax, ymax = bbox['xmin'], bbox['ymin'], bbox['xmax'], bbox['ymax']
     region = image[ymin:ymax, xmin:xmax]
 
-    # Jeśli bounding box jest za mały, zwróć stały kolor
     if region.size == 0:
         return "#000000"  # Czarny jako fallback
 
-    # Przekształć region na tablicę 2D z kolorami RGB
     region = region.reshape(-1, 3)
 
-    # Oblicz średnią wartość koloru
+    #  średnia koloru
     mean_color = np.mean(region, axis=0).astype(int)
-    r, g, b = mean_color[2], mean_color[1], mean_color[0]  # OpenCV używa BGR
+    r, g, b = mean_color[2], mean_color[1], mean_color[0]  
     return f"#{r:02x}{g:02x}{b:02x}"
 
 @app.route('/detect_video', methods=['POST'])
@@ -84,22 +80,21 @@ def detect_video():
     if not os.path.exists("wyniki"):
         os.makedirs("wyniki")
 
-    model.conf = 0.38  #pewności detekcji
+    model.conf = 0.57  #pewności 
 
     with open("wyniki/general_detections.txt", "w", encoding="utf-8") as general_file:
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
-                break  # Koniec wideo
+                break 
 
             img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             img_pil = Image.fromarray(img_rgb)
 
-            # Uzyskaj wyniki z modelu YOLO
             results = model(img_pil)
             detections = results.pandas().xyxy[0]
 
-            # Debug: Wyświetl detekcje w terminalu
+            # Debug terminalu
             print(f"Frame {frame_count}: Raw detections:\n{detections}")
 
             if ignored_classes:
@@ -111,15 +106,12 @@ def detect_video():
             if not detections.empty:
                 detection_list = []
 
-                # Przetwarzanie każdej detekcji
                 for _, detection in detections.iterrows():
                      # Oblicz środek (centroid) detekcji
                     xmin, ymin, xmax, ymax = int(detection['xmin']), int(detection['ymin']), int(detection['xmax']), int(detection['ymax'])
                     bbox = {"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax}
                     center_x = (xmin + xmax) // 2
                     center_y = (ymin + ymax) // 2
-
-                    # Przykład koloru (możesz dodać logikę generowania koloru)
                     color = get_dominant_color(frame, bbox)
 
                     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Znacznik czasu
@@ -135,7 +127,7 @@ def detect_video():
                             "xmax": xmax,
                             "ymax": ymax,
                         },
-                        "center": {  # Współrzędne środka
+                        "center": { 
                             "x": center_x,
                             "y": center_y
                         },
@@ -144,7 +136,6 @@ def detect_video():
                     }
                     detection_list.append(detection_entry)
 
-                # Zapisz detekcje do pliku tekstowego
                 general_file.write(f"Frame {frame_count}: {detection_list}\n")
                 general_file.flush()  # Wymuszenie zapisu na dysk
                 print(f"Frame {frame_count}: Detekcje zapisane do pliku.")
@@ -165,7 +156,7 @@ def get_all():
     if "error" in data:
         return jsonify({"error": data["error"]}), 500
     
-    # Debug: Print the item IDs
+    # Debug: Print ID
     print(f"Item IDs: {list(data.keys())}")
     
     return jsonify(data)
@@ -179,7 +170,6 @@ def get_by_class(class_name):
     filtered_data = {key: value for key, value in data.items() if value["name"] == class_name}
     return jsonify(filtered_data)
 
-# Endpoint do pobierania obrazu na podstawie numeru klatki
 @app.route('/get-frame/<int:frame_number>', methods=['GET'])
 def get_frame(frame_number):
     image_path = f"wyniki/frame_{frame_number}.jpg"
@@ -189,7 +179,6 @@ def get_frame(frame_number):
         print(f"Frame {frame_number} not found at path: {image_path}")  # Debug print
         return jsonify({"error": "Frame not found"}), 404
 
-# Endpoint do pobierania detali konkretnego przedmiotu
 @app.route('/get-item-details/<string:item_id>', methods=['GET'])
 def get_item_details(item_id):
     data = read_file()
@@ -200,7 +189,6 @@ def get_item_details(item_id):
     print(f"Requested item ID: {item_id}")
     print(f"Available item IDs: {list(data.keys())}")
 
-    # Search for the item by its unique identifier
     item_details = data.get(item_id)
 
     if item_details:

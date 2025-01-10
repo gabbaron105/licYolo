@@ -6,13 +6,13 @@ class TilesComponent extends StatelessWidget {
   final double widthPercentage; // Width percentage for the tiles
   final bool displayIcons; // Flag to determine if icons should be displayed
 
-  // Konstruktor przyjmuje dane
+  //  dane
   const TilesComponent({super.key, required this.tilesData, required this.onTileClick, required this.widthPercentage, this.displayIcons = false});
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 300, // Adjust the height as needed
+      height: 300, // Adjust the height
       child: GridView.builder(
         physics: ClampingScrollPhysics(), // Enable scrolling within the grid
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

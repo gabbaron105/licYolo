@@ -4,18 +4,17 @@ import 'package:http/http.dart' as http;
 class ApiService {
   static const String baseUrl = 'http://10.0.2.2:5000';
 
-  // Fetch all items and parse to DetectedItem objects
   static Future<List<DetectedItem>> fetchAllItems() async {
     final url = '$baseUrl/get-all';
-    print('Fetching all items from: $url'); // Debug print
+    print('Fetching all items from: $url'); 
     final response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
-      print('Response body: ${response.body}'); // Debug print
+      print('Response body: ${response.body}'); 
       final Map<String, dynamic> jsonData = json.decode(response.body);
       final items = jsonData.entries.map((entry) => DetectedItem.fromJson(entry.value, entry.key)).toList();
-      items.forEach((item) {
-        print('ItemID: ${item.itemID}'); // Print itemID
-      });
+      for (var item in items) {
+        print('ItemID: ${item.itemID}'); 
+      }
       return items;
     } else {
       throw Exception('Failed to load items');
