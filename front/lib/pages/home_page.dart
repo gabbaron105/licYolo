@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:front/pages/profile_page.dart';
-import '../components/tiles_component.dart';
+import '../components/home_tiles_component.dart'; // Import the new home tiles component
 import '../components/custom_navbar.dart'; // Import the custom navigation bar
 import 'search_page.dart'; // Import the new search page
 import 'filtered_items_page.dart'; // Import the filtered items page
@@ -128,33 +128,6 @@ class _HomeContent extends StatelessWidget {
       'toothbrush': 79,
     };
 
-    final filteredCategories = categoryClassMap.entries
-    .where((entry) => selectedClasses.contains(entry.value))
-    .map((entry) {
-      final item = allItems.firstWhere(
-        (item) => item.objectClass == entry.value,
-        orElse: () => api.DetectedItem(
-          itemID: '0', // Use itemID
-          objectClass: entry.value,
-          bbox: api.Bbox(xmin: 0.0, ymin: 0.0, xmax: 0.0, ymax: 0.0), // Default bounding box
-          center: api.Center(x: 0.0, y: 0.0), // Default center
-          confidence: 0.0, // Default confidence
-          frame: 0, // Default frame
-          color: '#000000', // Default color if no item is found
-          name: 'Unknown', // Default name
-          timestamp: DateTime.now(), // Default timestamp
-        ),
-      );
-      print('Filtered category: ${entry.key}, Item: ${item.name}'); // Debug print
-      return {
-        'title': entry.key,
-        'subtitle': 'Icon: ${entry.key.toLowerCase()}',
-        'id': entry.key,
-        'color': item.color,
-      };
-    }).toList();
-
-
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -168,9 +141,9 @@ class _HomeContent extends StatelessWidget {
             const SizedBox(height: 10),
             SizedBox(
               height: 670, // Adjust the height as needed
-              child: TilesComponent(
-                tilesData: filteredCategories,
-                onTileClick: (title, subtitle) {
+              child: HomeTilesComponent(
+                tilesData: allItems.where((item) => selectedClasses.contains(item.objectClass)).toList(), // Use DetectedItem objects
+                onTileClick: (title) {  // Updated to use single parameter
                   final classNumber = categoryClassMap[title];
                   final filteredItems = allItems.where((item) => item.objectClass == classNumber).toList();
                   print('Filtered items for $title: ${filteredItems.length} items'); // Debug print
@@ -185,7 +158,6 @@ class _HomeContent extends StatelessWidget {
                   );
                 },
                 widthPercentage: 0.5,
-                displayIcons: true, 
               ),
             ),
           ],

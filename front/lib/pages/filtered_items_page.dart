@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../components/tiles_component.dart';
+import '../components/details_tiles_component.dart'; // Import the new details tiles component
 import 'details_page.dart'; // Import the details page
 import '../api_conf/DetectedItem.dart' as api; // Import the API service with alias
 import '../components/custom_navbar.dart'; // Import the custom navigation bar
@@ -28,13 +28,8 @@ class _FilteredItemsPageState extends State<FilteredItemsPage> {
         padding: const EdgeInsets.all(16.0),
         child: SizedBox(
           height: 550,
-          child: TilesComponent(
-            tilesData: widget.items.map((item) {
-              return {
-                'title': item.name ?? 'Unknown Name',
-                'subtitle': item.color ?? '#000000',
-              };
-            }).toList(),
+          child: DetailsTilesComponent(
+            tilesData: widget.items, // Use DetectedItem objects
             onTileClick: (title, subtitle) {
               final clickedItem = widget.items.firstWhere(
                 (item) => item.name == title && item.color == subtitle,

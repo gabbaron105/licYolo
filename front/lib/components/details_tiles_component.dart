@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import '../api_conf/DetectedItem.dart' as api; // Import the API service with alias
 
-class TilesComponent extends StatelessWidget {
+class DetailsTilesComponent extends StatelessWidget {
   final List<api.DetectedItem> tilesData; // Use DetectedItem class for tilesData
   final Function(String, String) onTileClick; // Callback for tile clicks
   final double widthPercentage; // Width percentage for the tiles
 
-  const TilesComponent({super.key, required this.tilesData, required this.onTileClick, required this.widthPercentage});
+  const DetailsTilesComponent({super.key, required this.tilesData, required this.onTileClick, required this.widthPercentage});
 
   @override
   Widget build(BuildContext context) {

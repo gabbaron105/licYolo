@@ -103,12 +103,7 @@ class _SearchPageState extends State<SearchPage> {
                     SizedBox(
                       height: 500, // Adjust the height as needed
                       child: TilesComponent(
-                        tilesData: _filteredItems.map((item) {
-                          return {
-                            'title': item.name,
-                            'subtitle': item.color,
-                          };
-                        }).toList(),
+                        tilesData: _filteredItems, // Use DetectedItem objects
                         onTileClick: (title, subtitle) {
                           final clickedItem = allItems.firstWhere((item) => item.name == title && item.color == subtitle);
                           Navigator.push(
