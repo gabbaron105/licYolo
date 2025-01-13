@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../pages/home_page.dart';
 import '../pages/search_page.dart';
-import '../pages/profile_page.dart'; // Import the profile page
+import '../pages/profile_page.dart'; 
 
 class CustomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -34,7 +34,7 @@ class CustomNavBar extends StatelessWidget {
         currentIndex: currentIndex,
         onTap: (index) {
           onTap(index);
-          // Navigate to the respective page
+          // Navigate
           switch (index) {
             case 0:
               Navigator.pushAndRemoveUntil(

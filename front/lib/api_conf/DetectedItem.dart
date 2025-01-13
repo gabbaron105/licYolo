@@ -21,7 +21,6 @@ class ApiService {
     }
   }
 
-  // Fetch items by class name and parse to DetectedItem objects
   static Future<List<DetectedItem>> fetchItemsByClass(String className) async {
     final url = '$baseUrl/get-by-class/$className';
     print('Fetching items by class from: $url'); // Debug print
@@ -35,7 +34,6 @@ class ApiService {
     }
   }
 
-  // Fetch frame image by frame number
   static Future<String> fetchFrameImage(int frameNumber) async {
     final url = '$baseUrl/get-frame/$frameNumber';
     print('Fetching frame image from: $url'); // Debug print
@@ -47,7 +45,6 @@ class ApiService {
     }
   }
 
-  // Fetch item details by item ID
   static Future<DetectedItem> fetchItemDetails(String itemId) async {
     final url = '$baseUrl/get-item-details/$itemId';
     print('Fetching item details from: $url'); // Debug print
@@ -55,7 +52,7 @@ class ApiService {
     if (response.statusCode == 200) {
       print('Response body: ${response.body}'); // Debug print
       final Map<String, dynamic> jsonData = json.decode(response.body);
-      return DetectedItem.fromJson(jsonData, itemId); // Ensure itemId is passed correctly
+      return DetectedItem.fromJson(jsonData, itemId); 
     } else {
       throw Exception('Failed to load item details');
     }
@@ -87,7 +84,7 @@ class DetectedItem {
 
   factory DetectedItem.fromJson(Map<String, dynamic> json, String itemID) {
     return DetectedItem(
-      itemID: itemID, // Use itemID
+      itemID: itemID, 
       bbox: Bbox.fromJson(json['bbox'] ?? {}),
       center: Center.fromJson(json['center'] ?? {}),
       objectClass: json['class'] ?? 0,

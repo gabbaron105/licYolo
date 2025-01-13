@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'details_page.dart'; // Import the new details page
-import '../api_conf/DetectedItem.dart' as api; // Import the API service with alias
-import '../components/tiles_component.dart'; // Import the tiles component
-import '../components/custom_navbar.dart'; // Import the custom navigation bar
+import 'details_page.dart'; 
+import '../api_conf/DetectedItem.dart' as api;
+import '../components/tiles_component.dart'; 
+import '../components/custom_navbar.dart'; 
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -99,11 +99,11 @@ class _SearchPageState extends State<SearchPage> {
                         },
                       ),
                     ),
-                    SizedBox(height: 60), // Increased space between search bar and first tile
+                    SizedBox(height: 60), //space between search bar and first tile
                     SizedBox(
-                      height: 500, // Adjust the height as needed
+                      height: 500, 
                       child: TilesComponent(
-                        tilesData: _filteredItems, // Use DetectedItem objects
+                        tilesData: _filteredItems,
                         onTileClick: (title, subtitle) {
                           final clickedItem = allItems.firstWhere((item) => item.name == title && item.color == subtitle);
                           Navigator.push(

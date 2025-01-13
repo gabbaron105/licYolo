@@ -91,7 +91,6 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// Widget dla zawartości strony "Home"
 class _HomeContent extends StatelessWidget {
   final List<api.DetectedItem> allItems;
   final List<int> selectedClasses;
@@ -140,10 +139,10 @@ class _HomeContent extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             SizedBox(
-              height: 670, // Adjust the height as needed
+              height: 670, 
               child: HomeTilesComponent(
                 tilesData: allItems.where((item) => selectedClasses.contains(item.objectClass)).toList(), // Use DetectedItem objects
-                onTileClick: (title) {  // Updated to use single parameter
+                onTileClick: (title) {  
                   final classNumber = categoryClassMap[title];
                   final filteredItems = allItems.where((item) => item.objectClass == classNumber).toList();
                   print('Filtered items for $title: ${filteredItems.length} items'); // Debug print

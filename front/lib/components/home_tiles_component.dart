@@ -17,7 +17,7 @@ class HomeTilesComponent extends StatelessWidget {
       child: GridView.builder(
         physics: ClampingScrollPhysics(), // Enable scrolling within the grid
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3, // Number of columns
+          crossAxisCount: 3, 
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
         ),
@@ -25,9 +25,9 @@ class HomeTilesComponent extends StatelessWidget {
         itemBuilder: (context, index) {
           final group = groupedItems[index];
           final name = group['name'];
-          print('Group name: $name'); // Debug print
+          print('Group name: $name'); 
           return GestureDetector(
-            onTap: () => onTileClick(name), // Updated to pass only the name
+            onTap: () => onTileClick(name), 
             child: Container(
               width: MediaQuery.of(context).size.width * widthPercentage,
               padding: EdgeInsets.all(16.0),

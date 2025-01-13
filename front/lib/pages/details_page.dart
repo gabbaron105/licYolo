@@ -14,7 +14,7 @@ class DetailsPage extends StatefulWidget {
 
 class _DetailsPageState extends State<DetailsPage> {
   late Future<api.DetectedItem> itemDetails;
-  int _currentIndex = 0; // Define _currentIndex
+  int _currentIndex = 0;
 
   @override
   void initState() {
@@ -24,7 +24,6 @@ class _DetailsPageState extends State<DetailsPage> {
 
   Future<api.DetectedItem> fetchItemDetails(String itemId) async {
     try {
-      // Pass the full item ID to the backend
       print('Fetching details for item ID: $itemId'); // Debug print
       final item = await api.ApiService.fetchItemDetails(itemId);
       return item;
@@ -64,7 +63,7 @@ class _DetailsPageState extends State<DetailsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title at the top
+               
                   Center(
                     child: Text(
                       itemDetails.name,
@@ -72,7 +71,7 @@ class _DetailsPageState extends State<DetailsPage> {
                     ),
                   ),
                   SizedBox(height: 20),
-                  // Information card
+   
                   Card(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -203,7 +202,7 @@ class BoundingBoxPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.red
+      ..color = const Color.fromARGB(255, 255, 35, 19)
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 

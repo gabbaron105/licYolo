@@ -29,12 +29,12 @@ class _FilteredItemsPageState extends State<FilteredItemsPage> {
         child: SizedBox(
           height: 550,
           child: DetailsTilesComponent(
-            tilesData: widget.items, // Use DetectedItem objects
+            tilesData: widget.items, 
             onTileClick: (title, subtitle) {
               final clickedItem = widget.items.firstWhere(
                 (item) => item.name == title && item.color == subtitle,
                 orElse: () => api.DetectedItem(
-                  itemID: '0', // Use itemID
+                  itemID: '0', 
                   objectClass: 0,
                   bbox: api.Bbox(xmin: 0.0, ymin: 0.0, xmax: 0.0, ymax: 0.0),
                   center: api.Center(x: 0.0, y: 0.0),
@@ -49,7 +49,7 @@ class _FilteredItemsPageState extends State<FilteredItemsPage> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => DetailsPage(
-                    itemId: clickedItem.itemID, // Use itemID instead of id
+                    itemId: clickedItem.itemID, 
                   ),
                 ),
               );

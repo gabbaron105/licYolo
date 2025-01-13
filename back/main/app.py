@@ -41,7 +41,7 @@ def get_dominant_color(image, bbox):
     region = image[ymin:ymax, xmin:xmax]
 
     if region.size == 0:
-        return "#000000"  # Czarny jako fallback
+        return "#000000"
 
     region = region.reshape(-1, 3)
 
@@ -59,20 +59,16 @@ def detect_video():
     if not video_url:
         return jsonify({"error": "No video URL provided"}), 400
 
-    # Debug: Print the video URL
-    print(f"Video URL: {video_url}")
+    #print(f"Video URL: {video_url}")
 
-    # Remove 'file://' prefix if it exists
     if video_url.startswith('file://'):
         video_url = video_url[7:]
 
-    # Debug: Print the modified video URL
-    print(f"Modified Video URL: {video_url}")
+    ##print(f"Modified Video URL: {video_url}")
 
-    # Otwórz strumień wideo
     cap = cv2.VideoCapture(video_url)
     if not cap.isOpened():
-        print(f"Failed to open video stream: {video_url}")  # Debug print
+        print(f"Failed to open video stream: {video_url}")  
         return jsonify({"error": "Failed to open video stream"}), 400
 
     frame_count = 0
@@ -94,28 +90,25 @@ def detect_video():
             results = model(img_pil)
             detections = results.pandas().xyxy[0]
 
-            # Debug terminalu
-            print(f"Frame {frame_count}: Raw detections:\n{detections}")
+            #print(f"Frame {frame_count}: Raw detections:\n{detections}")
 
             if ignored_classes:
                 detections = detections[~detections['class'].isin(ignored_classes)]
 
-            # Debug: Po filtrowaniu klas ignorowanych
             print(f"Frame {frame_count}: Filtered detections:\n{detections}")
 
             if not detections.empty:
                 detection_list = []
 
                 for _, detection in detections.iterrows():
-                     # Oblicz środek (centroid) detekcji
                     xmin, ymin, xmax, ymax = int(detection['xmin']), int(detection['ymin']), int(detection['xmax']), int(detection['ymax'])
                     bbox = {"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax}
                     center_x = (xmin + xmax) // 2
                     center_y = (ymin + ymax) // 2
                     color = get_dominant_color(frame, bbox)
 
-                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Znacznik czasu
-                    name = detection['name'] if 'name' in detection else f"class_{detection['class']}"  # Nazwa klasy
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  
+                    name = detection['name'] if 'name' in detection else f"class_{detection['class']}"  
 
                     detection_entry = {
                         "class": detection['class'],
@@ -137,10 +130,9 @@ def detect_video():
                     detection_list.append(detection_entry)
 
                 general_file.write(f"Frame {frame_count}: {detection_list}\n")
-                general_file.flush()  # Wymuszenie zapisu na dysk
+                general_file.flush()  # Wymuszenie  
                 print(f"Frame {frame_count}: Detekcje zapisane do pliku.")
 
-                # Zapisz obraz z detekcjami w katalogu "wyniki"
                 img_name = f"wyniki/frame_{frame_count}.jpg"
                 cv2.imwrite(img_name, frame)
                 print(f"Frame {frame_count}: Zapisano obraz: {img_name}")
@@ -156,8 +148,7 @@ def get_all():
     if "error" in data:
         return jsonify({"error": data["error"]}), 500
     
-    # Debug: Print ID
-    print(f"Item IDs: {list(data.keys())}")
+    #print(f"Item IDs: {list(data.keys())}")
     
     return jsonify(data)
 
@@ -176,7 +167,7 @@ def get_frame(frame_number):
     if os.path.exists(image_path):
         return send_file(image_path, mimetype='image/jpeg')
     else:
-        print(f"Frame {frame_number} not found at path: {image_path}")  # Debug print
+        print(f"Frame {frame_number} not found at path: {image_path}") 
         return jsonify({"error": "Frame not found"}), 404
 
 @app.route('/get-item-details/<string:item_id>', methods=['GET'])
@@ -185,9 +176,8 @@ def get_item_details(item_id):
     if "error" in data:
         return jsonify({"error": data["error"]}), 500
 
-    # Debug: Print the item ID and data keys
-    print(f"Requested item ID: {item_id}")
-    print(f"Available item IDs: {list(data.keys())}")
+    #print(f"Requested item ID: {item_id}")
+    #print(f"Available item IDs: {list(data.keys())}")
 
     item_details = data.get(item_id)
 

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import '../api_conf/DetectedItem.dart' as api; // Import the API service with alias
+import '../api_conf/DetectedItem.dart' as api; 
 
 class TilesComponent extends StatelessWidget {
-  final List<api.DetectedItem> tilesData; // Use DetectedItem class for tilesData
-  final Function(String, String) onTileClick; // Callback for tile clicks
-  final double widthPercentage; // Width percentage for the tiles
-
+  final List<api.DetectedItem> tilesData; 
+  final Function(String, String) onTileClick; 
+  final double widthPercentage; 
   const TilesComponent({super.key, required this.tilesData, required this.onTileClick, required this.widthPercentage});
 
   @override
@@ -13,19 +12,19 @@ class TilesComponent extends StatelessWidget {
     return SizedBox(
       height: 300, // Adjust the height
       child: GridView.builder(
-        physics: ClampingScrollPhysics(), // Enable scrolling within the grid
+        physics: ClampingScrollPhysics(), 
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3, // Number of columns
+          crossAxisCount: 3, 
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
         ),
         itemCount: tilesData.length,
         itemBuilder: (context, index) {
           final tile = tilesData[index];
-          final itemIDPart = tile.itemID.split('_').last; // Extract the part after the last '_'
+          final itemIDPart = tile.itemID.split('_').last; 
           final color = tile.color.replaceAll('#', '0xff');
-          final nameParts = tile.name.split(' '); // Split the name by spaces
-          print('Tile title: ${tile.name}, ItemID part: $itemIDPart, Color: $color'); // Debug print
+          final nameParts = tile.name.split(' '); 
+          //print('Tile title: ${tile.name}, ItemID part: $itemIDPart, Color: $color'); 
           return GestureDetector(
             onTap: () => onTileClick(tile.name, tile.color),
             child: Container(
