@@ -6,7 +6,7 @@ import math
 
 
 class ObjectTracker:
-    def __init__(self, delta_color_threshold=150):
+    def __init__(self, delta_color_threshold):
         """
         Inicjalizuje tracker z limitem podobieństwa kolorów.
         :param delta_color_threshold: Maksymalna akceptowalna różnica między kolorami.

@@ -10,11 +10,16 @@ from datetime import datetime
 import random
 import numpy as np
 import json
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 
-
+logging.debug("Loading YOLOv5 model...")
 model = torch.hub.load('ultralytics/yolov5', 'yolov5x6', pretrained=True)
+logging.debug("YOLOv5 model loaded successfully!")
 
 @app.route('/')
 def home():
@@ -142,6 +147,81 @@ def detect_video():
     cap.release()
     return jsonify({"status": "Processing complete"}), 200
 
+@app.route('/upload_frame', methods=['POST'])
+def upload_frame():
+    if not request.data:
+        logging.error("No data received")
+        return jsonify({"error": "No data received"}), 400
+
+    img_bytes = request.data
+    ignored_classes = request.args.getlist('ignored_classes', type=int)
+
+    try:
+        logging.debug("Reading image from bytes")
+        # Odczytaj obraz
+        img = Image.open(io.BytesIO(img_bytes))
+        img_rgb = img.convert("RGB")
+        img_np = np.array(img_rgb)
+        logging.debug("Image read successfully")
+
+        logging.debug("Running detection model")
+        # Detekcja
+        results = model(img_rgb)
+        detections = results.pandas().xyxy[0]
+        logging.debug(f"Detections: {detections}")
+
+        if ignored_classes:
+            logging.debug(f"Ignoring classes: {ignored_classes}")
+            detections = detections[~detections['class'].isin(ignored_classes)]
+            logging.debug(f"Filtered detections: {detections}")
+
+        detection_list = []
+        if not os.path.exists("wyniki"):
+            os.makedirs("wyniki")
+
+        frame_count = len([name for name in os.listdir("wyniki") if name.endswith(".jpg")]) + 1  # Increment frame count
+
+        if not detections.empty:
+            for _, detection in detections.iterrows():
+                xmin, ymin, xmax, ymax = int(detection['xmin']), int(detection['ymin']), int(detection['xmax']), int(detection['ymax'])
+                bbox = {"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax}
+                center_x = (xmin + xmax) // 2
+                center_y = (ymin + ymax) // 2
+                color = get_dominant_color(img_np, bbox)
+
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                name = detection['name'] if 'name' in detection else f"class_{detection['class']}"
+
+                detection_entry = {
+                    "class": detection['class'],
+                    "name": name,
+                    "confidence": round(detection['confidence'], 2),
+                    "bbox": bbox,
+                    "center": {
+                        "x": center_x,
+                        "y": center_y
+                    },
+                    "color": color,
+                    "timestamp": timestamp
+                }
+                detection_list.append(detection_entry)
+
+            # Zapisz wyniki detekcji do pliku
+            with open("wyniki/general_detections.txt", "a", encoding="utf-8") as f:
+                f.write(f"Frame {frame_count}: {json.dumps(detection_list, ensure_ascii=False)}\n")
+
+            # Zapisz obraz
+            img_name = f"wyniki/frame_{frame_count}.jpg"
+            img.save(img_name)
+            logging.debug(f"Frame {frame_count}: Zapisano obraz: {img_name}")
+
+        return jsonify({"detections": detection_list}), 200
+
+    except Exception as e:
+        logging.error(f"Error processing frame: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/get-all', methods=['GET'])
 def get_all():
     data = read_file()
@@ -187,5 +267,6 @@ def get_item_details(item_id):
         return jsonify({"error": "Item not found"}), 404
 
 if __name__ == '__main__':
-    CORS(app.run(debug=True))
+    CORS(app)
+    app.run(host='0.0.0.0',debug=True)  # Disable the Flask debugger
 
