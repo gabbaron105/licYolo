@@ -1,5 +1,5 @@
 from flask_cors import CORS
-import torch
+from ultralytics import YOLO
 from PIL import Image
 import io
 import os
@@ -7,34 +7,27 @@ from flask import Flask, request, jsonify, send_file
 import cv2
 from collections import defaultdict
 from datetime import datetime
-import random
 import numpy as np
 import json
 import logging
 
-# Configure logging
+# Konfiguracja logowania
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 
-logging.debug("Loading YOLOv5 model...")
-model = torch.hub.load('ultralytics/yolov5', 'yolov5x6', pretrained=True)
-logging.debug("YOLOv5 model loaded successfully!")
+# Ładowanie modelu YOLO
+try:
+    logging.debug("Ładowanie modelu YOLO...")
+    model = YOLO("./yolo/yolo11l.pt")  # Zmień plik na właściwy plik modelu YOLO
+    logging.debug("Model YOLO załadowany pomyślnie!")
+except Exception as e:
+    logging.error(f"Błąd ładowania modelu YOLO: {str(e)}")
+    raise
 
 @app.route('/')
 def home():
     return "Flask server is running!"
-
-def read_file():
-    try:
-        with open("zgubione.txt", 'r') as file:
-            data = file.readlines()
-        parsed_data = {line.split(": ", 1)[0]: json.loads(line.split(": ", 1)[1]) for line in data}
-        return parsed_data
-    except FileNotFoundError:
-        return {}
-    except Exception as e:
-        return {"error": str(e)}
 
 def get_dominant_color(image, bbox):
     """
@@ -49,31 +42,25 @@ def get_dominant_color(image, bbox):
         return "#000000"
 
     region = region.reshape(-1, 3)
-
-    #  średnia koloru
     mean_color = np.mean(region, axis=0).astype(int)
-    r, g, b = mean_color[2], mean_color[1], mean_color[0]  
+    r, g, b = mean_color[2], mean_color[1], mean_color[0]
     return f"#{r:02x}{g:02x}{b:02x}"
 
 @app.route('/detect_video', methods=['POST'])
 def detect_video():
     data = request.get_json()
     video_url = data.get("video_url")
-    ignored_classes = data.get("ignored_classes", [])  
+    ignored_classes = data.get("ignored_classes", [])
 
     if not video_url:
         return jsonify({"error": "No video URL provided"}), 400
 
-    #print(f"Video URL: {video_url}")
-
     if video_url.startswith('file://'):
         video_url = video_url[7:]
 
-    ##print(f"Modified Video URL: {video_url}")
-
     cap = cv2.VideoCapture(video_url)
     if not cap.isOpened():
-        print(f"Failed to open video stream: {video_url}")  
+        logging.error(f"Nie udało się otworzyć wideo: {video_url}")
         return jsonify({"error": "Failed to open video stream"}), 400
 
     frame_count = 0
@@ -81,51 +68,40 @@ def detect_video():
     if not os.path.exists("wyniki"):
         os.makedirs("wyniki")
 
-    model.conf = 0.57  #pewności 
-
     with open("wyniki/general_detections.txt", "w", encoding="utf-8") as general_file:
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
-                break 
+                break
 
             img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             img_pil = Image.fromarray(img_rgb)
 
-            results = model(img_pil)
-            detections = results.pandas().xyxy[0]
-
-            #print(f"Frame {frame_count}: Raw detections:\n{detections}")
+            results = model.predict(img_pil, verbose=False)  # Wykonanie predykcji
+            detections = results[0].boxes.data.cpu().numpy()  # Wyniki jako numpy
 
             if ignored_classes:
-                detections = detections[~detections['class'].isin(ignored_classes)]
+                detections = [d for d in detections if int(d[5]) not in ignored_classes]
 
-            print(f"Frame {frame_count}: Filtered detections:\n{detections}")
-
-            if not detections.empty:
+            if len(detections) > 0:
                 detection_list = []
 
-                for _, detection in detections.iterrows():
-                    xmin, ymin, xmax, ymax = int(detection['xmin']), int(detection['ymin']), int(detection['xmax']), int(detection['ymax'])
+                for detection in detections:
+                    xmin, ymin, xmax, ymax, confidence, class_id = map(int, detection[:6])
                     bbox = {"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax}
                     center_x = (xmin + xmax) // 2
                     center_y = (ymin + ymax) // 2
                     color = get_dominant_color(frame, bbox)
 
-                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  
-                    name = detection['name'] if 'name' in detection else f"class_{detection['class']}"  
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    name = f"class_{class_id}"
 
                     detection_entry = {
-                        "class": detection['class'],
+                        "class": class_id,
                         "name": name,
-                        "confidence": round(detection['confidence'], 2),
-                        "bbox": {
-                            "xmin": xmin,
-                            "ymin": ymin,
-                            "xmax": xmax,
-                            "ymax": ymax,
-                        },
-                        "center": { 
+                        "confidence": round(confidence, 2),
+                        "bbox": bbox,
+                        "center": {
                             "x": center_x,
                             "y": center_y
                         },
@@ -134,13 +110,10 @@ def detect_video():
                     }
                     detection_list.append(detection_entry)
 
-                general_file.write(f"Frame {frame_count}: {detection_list}\n")
-                general_file.flush()  # Wymuszenie  
-                print(f"Frame {frame_count}: Detekcje zapisane do pliku.")
-
+                general_file.write(f"Frame {frame_count}: {json.dumps(detection_list, ensure_ascii=False)}\n")
+                general_file.flush()
                 img_name = f"wyniki/frame_{frame_count}.jpg"
                 cv2.imwrite(img_name, frame)
-                print(f"Frame {frame_count}: Zapisano obraz: {img_name}")
 
             frame_count += 1
 
@@ -157,45 +130,37 @@ def upload_frame():
     ignored_classes = request.args.getlist('ignored_classes', type=int)
 
     try:
-        logging.debug("Reading image from bytes")
-        # Odczytaj obraz
         img = Image.open(io.BytesIO(img_bytes))
         img_rgb = img.convert("RGB")
         img_np = np.array(img_rgb)
-        logging.debug("Image read successfully")
 
-        logging.debug("Running detection model")
-        # Detekcja
-        results = model(img_rgb)
-        detections = results.pandas().xyxy[0]
-        logging.debug(f"Detections: {detections}")
+        results = model.predict(img_rgb, verbose=False)  # Wykonanie predykcji
+        detections = results[0].boxes.data.cpu().numpy()  # Wyniki jako numpy
 
         if ignored_classes:
-            logging.debug(f"Ignoring classes: {ignored_classes}")
-            detections = detections[~detections['class'].isin(ignored_classes)]
-            logging.debug(f"Filtered detections: {detections}")
+            detections = [d for d in detections if int(d[5]) not in ignored_classes]
 
         detection_list = []
         if not os.path.exists("wyniki"):
             os.makedirs("wyniki")
 
-        frame_count = len([name for name in os.listdir("wyniki") if name.endswith(".jpg")]) + 1  # Increment frame count
+        frame_count = len([name for name in os.listdir("wyniki") if name.endswith(".jpg")]) + 1
 
-        if not detections.empty:
-            for _, detection in detections.iterrows():
-                xmin, ymin, xmax, ymax = int(detection['xmin']), int(detection['ymin']), int(detection['xmax']), int(detection['ymax'])
+        if len(detections) > 0:
+            for detection in detections:
+                xmin, ymin, xmax, ymax, confidence, class_id = map(int, detection[:6])
                 bbox = {"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax}
                 center_x = (xmin + xmax) // 2
                 center_y = (ymin + ymax) // 2
                 color = get_dominant_color(img_np, bbox)
 
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                name = detection['name'] if 'name' in detection else f"class_{detection['class']}"
+                name = f"class_{class_id}"
 
                 detection_entry = {
-                    "class": detection['class'],
+                    "class": class_id,
                     "name": name,
-                    "confidence": round(detection['confidence'], 2),
+                    "confidence": round(confidence, 2),
                     "bbox": bbox,
                     "center": {
                         "x": center_x,
@@ -206,14 +171,11 @@ def upload_frame():
                 }
                 detection_list.append(detection_entry)
 
-            # Zapisz wyniki detekcji do pliku
             with open("wyniki/general_detections.txt", "a", encoding="utf-8") as f:
                 f.write(f"Frame {frame_count}: {json.dumps(detection_list, ensure_ascii=False)}\n")
 
-            # Zapisz obraz
             img_name = f"wyniki/frame_{frame_count}.jpg"
             img.save(img_name)
-            logging.debug(f"Frame {frame_count}: Zapisano obraz: {img_name}")
 
         return jsonify({"detections": detection_list}), 200
 
@@ -222,51 +184,6 @@ def upload_frame():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/get-all', methods=['GET'])
-def get_all():
-    data = read_file()
-    if "error" in data:
-        return jsonify({"error": data["error"]}), 500
-    
-    #print(f"Item IDs: {list(data.keys())}")
-    
-    return jsonify(data)
-
-@app.route('/get-by-class/<class_name>', methods=['GET'])
-def get_by_class(class_name):
-    data = read_file()
-    if "error" in data:
-        return jsonify({"error": data["error"]}), 500
-    
-    filtered_data = {key: value for key, value in data.items() if value["name"] == class_name}
-    return jsonify(filtered_data)
-
-@app.route('/get-frame/<int:frame_number>', methods=['GET'])
-def get_frame(frame_number):
-    image_path = f"wyniki/frame_{frame_number}.jpg"
-    if os.path.exists(image_path):
-        return send_file(image_path, mimetype='image/jpeg')
-    else:
-        print(f"Frame {frame_number} not found at path: {image_path}") 
-        return jsonify({"error": "Frame not found"}), 404
-
-@app.route('/get-item-details/<string:item_id>', methods=['GET'])
-def get_item_details(item_id):
-    data = read_file()
-    if "error" in data:
-        return jsonify({"error": data["error"]}), 500
-
-    #print(f"Requested item ID: {item_id}")
-    #print(f"Available item IDs: {list(data.keys())}")
-
-    item_details = data.get(item_id)
-
-    if item_details:
-        return jsonify(item_details)
-    else:
-        return jsonify({"error": "Item not found"}), 404
-
 if __name__ == '__main__':
     CORS(app)
-    app.run(host='0.0.0.0',debug=True)  # Disable the Flask debugger
-
+    app.run(host='0.0.0.0', debug=True)
