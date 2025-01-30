@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = 'http://10.0.2.2:5000';
+  static const String baseUrl = 'http://192.168.50.182:5000';
 
   static Future<List<DetectedItem>> fetchAllItems() async {
     final url = '$baseUrl/get-all';
@@ -65,7 +65,6 @@ class DetectedItem {
   final Center center;
   final int objectClass;
   final String color;
-  final double confidence;
   final int frame;
   final String name;
   final DateTime timestamp;
@@ -76,7 +75,6 @@ class DetectedItem {
     required this.center,
     required this.objectClass,
     required this.color,
-    required this.confidence,
     required this.frame,
     required this.name,
     required this.timestamp,
@@ -89,7 +87,6 @@ class DetectedItem {
       center: Center.fromJson(json['center'] ?? {}),
       objectClass: json['class'] ?? 0,
       color: json['color'] ?? '#000000',
-      confidence: (json['confidence'] ?? 0.0).toDouble(),
       frame: json['frame'] ?? 0,
       name: json['name'] ?? 'Unknown',
       timestamp: DateTime.parse(json['timestamp'] ?? DateTime.now().toIso8601String()),

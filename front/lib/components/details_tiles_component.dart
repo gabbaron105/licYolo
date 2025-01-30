@@ -25,7 +25,7 @@ class DetailsTilesComponent extends StatelessWidget {
           final itemIDPart = tile.itemID.split('_').last;
           final color = tile.color.replaceAll('#', '0xff');
           final nameParts = tile.name.split(' '); 
-          //print('Tile title: ${tile.name}, ItemID part: $itemIDPart, Color: $color'); 
+          print('Tile title: ${tile.name}, ItemID part: $itemIDPart, Color: $color'); 
           return GestureDetector(
             onTap: () => onTileClick(tile.name, tile.color),
             child: Container(

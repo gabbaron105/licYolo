@@ -11,7 +11,6 @@ class DetailsPage extends StatefulWidget {
   _DetailsPageState createState() => _DetailsPageState();
 }
 
-
 class _DetailsPageState extends State<DetailsPage> {
   late Future<api.DetectedItem> itemDetails;
   int _currentIndex = 0;
@@ -63,7 +62,6 @@ class _DetailsPageState extends State<DetailsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-               
                   Center(
                     child: Text(
                       itemDetails.name,
@@ -71,7 +69,6 @@ class _DetailsPageState extends State<DetailsPage> {
                     ),
                   ),
                   SizedBox(height: 20),
-   
                   Card(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -82,10 +79,6 @@ class _DetailsPageState extends State<DetailsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Confidence: ${itemDetails.confidence}',
-                            style: TextStyle(fontSize: 16),
-                          ),
                           Row(
                             children: [
                               Text(
@@ -126,32 +119,43 @@ class _DetailsPageState extends State<DetailsPage> {
                         return Center(child: Text('Failed to load image'));
                       } else {
                         return Container(
-                          margin: EdgeInsets.symmetric(
-                              horizontal: MediaQuery.of(context).size.width * 0.1), 
+                          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey, width: 2),
-                            borderRadius: BorderRadius.circular(10),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.grey.shade300,
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.2),
+                                spreadRadius: 1,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
                           ),
-                          padding: const EdgeInsets.all(8.0),
-                          child: SizedBox(
-                  
-                            height: MediaQuery.of(context).size.width,
-                            width: MediaQuery.of(context).size.width * 0.6,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  Image.network(
-                                    snapshot.data!,
-                                    fit: BoxFit.contain,
-                                  ),
-                                  CustomPaint(
-                                    painter: BoundingBoxPainter(
-                                      bbox: itemDetails.bbox,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: AspectRatio(
+                              aspectRatio: 800 / 600, // Match your image dimensions
+                              child: Container(
+                                padding: EdgeInsets.all(8),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    Image.network(
+                                      snapshot.data!,
+                                      fit: BoxFit.contain,
                                     ),
-                                  ),
-                                ],
+                                    CustomPaint(
+                                      painter: BoundingBoxPainter(
+                                        bbox: itemDetails.bbox,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -201,22 +205,54 @@ class BoundingBoxPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
+    // Box paint configuration
+    final boxPaint = Paint()
       ..color = const Color.fromARGB(255, 255, 35, 19)
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 
-    final double scaleX = size.width / 640; 
-    final double scaleY = size.height / 360;  
+    // Hand icon paint configuration
+    final handPaint = Paint()
+      ..color = const Color.fromARGB(255, 255, 35, 19)
+      ..style = PaintingStyle.fill;
 
+    // Scale factors based on 800x600 image dimensions
+    final double scaleX = size.width / 800;
+    final double scaleY = size.height / 600;
+
+    // Calculate scaled bounding box coordinates
     final double xmin = bbox.xmin.toDouble() * scaleX;
     final double ymin = bbox.ymin.toDouble() * scaleY;
     final double xmax = bbox.xmax.toDouble() * scaleX;
     final double ymax = bbox.ymax.toDouble() * scaleY;
 
+    // Draw bounding box
     final bboxRect = Rect.fromLTRB(xmin, ymin, xmax, ymax);
+    canvas.drawRect(bboxRect, boxPaint);
 
-    canvas.drawRect(bboxRect, paint);
+    // Draw hand icon
+    // Calculate hand position (top-left corner of bbox)
+    final handSize = 20.0;
+    final handPath = Path();
+    
+    // Starting from top-left of bbox
+    handPath.moveTo(xmin, ymin);
+    // Thumb
+    handPath.relativeLineTo(0, handSize * 0.6);
+    handPath.relativeLineTo(handSize * 0.3, -handSize * 0.2);
+    // Index finger
+    handPath.relativeLineTo(handSize * 0.15, -handSize * 0.4);
+    // Middle finger
+    handPath.relativeLineTo(handSize * 0.15, -handSize * 0.3);
+    // Ring finger
+    handPath.relativeLineTo(handSize * 0.15, -handSize * 0.2);
+    // Pinky
+    handPath.relativeLineTo(handSize * 0.15, -handSize * 0.1);
+    // Close the path
+    handPath.close();
+
+    // Draw hand icon
+    canvas.drawPath(handPath, handPaint);
   }
 
   @override

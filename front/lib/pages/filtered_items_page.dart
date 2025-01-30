@@ -38,7 +38,6 @@ class _FilteredItemsPageState extends State<FilteredItemsPage> {
                   objectClass: 0,
                   bbox: api.Bbox(xmin: 0.0, ymin: 0.0, xmax: 0.0, ymax: 0.0),
                   center: api.Center(x: 0.0, y: 0.0),
-                  confidence: 0.0,
                   frame: 0,
                   color: '#000000',
                   name: 'Unknown',

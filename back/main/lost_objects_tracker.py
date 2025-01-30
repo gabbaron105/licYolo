@@ -3,6 +3,7 @@ import time
 import re
 from pathlib import Path
 import math
+import os
 
 
 class ObjectTracker:
@@ -159,5 +160,13 @@ def monitor_file(input_file, output_file, delta_color_threshold):
         time.sleep(2)
 
 
+def ensure_directory_exists(file_path):
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+
 if __name__ == "__main__":
-    monitor_file('back/main/wyniki/general_detections.txt', 'back/main/zgubione.txt',delta_color_threshold=100)
+    output_file = './zgubione.txt'
+    ensure_directory_exists(output_file)
+    monitor_file('./wyniki/general_detections.txt', output_file, delta_color_threshold=100)

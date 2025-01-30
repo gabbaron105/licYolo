@@ -10,13 +10,13 @@ from datetime import datetime
 import numpy as np
 import json
 import logging
-
+from data_routes import data_bp
+from ignore_routes import ignore_bp
 # Konfiguracja logowania
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 
-# Ładowanie modelu YOLO
 try:
     logging.debug("Ładowanie modelu YOLO...")
     model = YOLO("./yolo/yolo11l.pt")  # Zmień plik na właściwy plik modelu YOLO
@@ -24,6 +24,9 @@ try:
 except Exception as e:
     logging.error(f"Błąd ładowania modelu YOLO: {str(e)}")
     raise
+
+app.register_blueprint(data_bp)
+app.register_blueprint(ignore_bp)
 
 @app.route('/')
 def home():
@@ -99,7 +102,6 @@ def detect_video():
                     detection_entry = {
                         "class": class_id,
                         "name": name,
-                        "confidence": round(confidence, 2),
                         "bbox": bbox,
                         "center": {
                             "x": center_x,
@@ -120,6 +122,20 @@ def detect_video():
     cap.release()
     return jsonify({"status": "Processing complete"}), 200
 
+
+
+with open("class_names.json", "r", encoding="utf-8") as f:
+    CLASS_NAMES = json.load(f)
+
+def load_ignored_classes():
+    try:
+        if os.path.exists("./ignored_classes.json"):
+            with open("ignored_classes.json", "r", encoding="utf-8") as f:
+                return json.load(f).get("ignored_classes", [])
+    except Exception as e:
+        logging.error(f"Error loading ignored classes: {str(e)}")
+    return []
+
 @app.route('/upload_frame', methods=['POST'])
 def upload_frame():
     if not request.data:
@@ -127,7 +143,7 @@ def upload_frame():
         return jsonify({"error": "No data received"}), 400
 
     img_bytes = request.data
-    ignored_classes = request.args.getlist('ignored_classes', type=int)
+    ignored_classes = load_ignored_classes()
 
     try:
         img = Image.open(io.BytesIO(img_bytes))
@@ -137,8 +153,7 @@ def upload_frame():
         results = model.predict(img_rgb, verbose=False)  # Wykonanie predykcji
         detections = results[0].boxes.data.cpu().numpy()  # Wyniki jako numpy
 
-        if ignored_classes:
-            detections = [d for d in detections if int(d[5]) not in ignored_classes]
+        detections = [d for d in detections if int(d[5]) not in ignored_classes]
 
         detection_list = []
         if not os.path.exists("wyniki"):
@@ -155,7 +170,7 @@ def upload_frame():
                 color = get_dominant_color(img_np, bbox)
 
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                name = f"class_{class_id}"
+                name = CLASS_NAMES.get(str(class_id), f"class_{class_id}")  # Pobranie nazwy z JSON
 
                 detection_entry = {
                     "class": class_id,
@@ -182,6 +197,7 @@ def upload_frame():
     except Exception as e:
         logging.error(f"Error processing frame: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
 
 
 if __name__ == '__main__':

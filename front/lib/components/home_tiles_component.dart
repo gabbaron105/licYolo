@@ -78,55 +78,50 @@ class HomeTilesComponent extends StatelessWidget {
   }
 
   IconData _getIconData(String title) {
-    switch (title.toLowerCase()) {
-      case 'umbrella':
-        return Icons.beach_access;
-      case 'handbag':
-        return Icons.shopping_bag;
-      case 'tie':
-        return Icons.accessibility_new;
-      case 'suitcase':
-        return Icons.work;
-      case 'kite':
-        return Icons.toys;
-      case 'sports ball':
-        return Icons.sports_soccer;
-      case 'snowboard':
-        return Icons.snowboarding;
-      case 'baseball glove':
-        return Icons.sports_baseball;
-      case 'surfboard':
-        return Icons.surfing;
-      case 'tennis racket':
-        return Icons.sports_tennis;
-      case 'bottle':
-        return Icons.local_drink;
-      case 'wine glass':
-        return Icons.wine_bar;
-      case 'cup':
-        return Icons.coffee;
-      case 'fork':
-        return Icons.restaurant;
-      case 'laptop':
-        return Icons.laptop;
-      case 'mouse':
-        return Icons.mouse;
-      case 'remote':
-        return Icons.tv;
-      case 'keyboard':
-        return Icons.keyboard;
-      case 'cell phone':
-        return Icons.phone_android;
-      case 'clock':
-        return Icons.access_time;
-      case 'teddy bear':
-        return Icons.toys;
-      case 'hair drier':
-        return Icons.bathroom;
-      case 'toothbrush':
-        return Icons.brush;
-      default:
-        return Icons.help_outline;
-    }
+    final switcher = {
+      'cat' : Icons.pets,
+      'dog': Icons.pets,
+      'umbrella': Icons.beach_access,
+      'handbag': Icons.shopping_bag,
+      'tie': Icons.accessibility_new,
+      'suitcase': Icons.work,
+      'kite': Icons.toys,
+      'sports ball': Icons.sports_soccer,
+      'snowboard': Icons.snowboarding,
+      'baseball bat': Icons.sports_cricket,
+      'baseball glove': Icons.sports_baseball,
+      'skateboard': Icons.directions_run,
+      'surfboard': Icons.surfing,
+      'tennis racket': Icons.sports_tennis,
+      'bottle': Icons.local_drink,
+      'wine glass': Icons.wine_bar,
+      'cup': Icons.local_cafe,
+      'fork': Icons.restaurant,
+      'knife': Icons.restaurant_menu,
+      'spoon': Icons.restaurant,
+      'bowl': Icons.ramen_dining,
+      'banana': Icons.eco,
+      'apple': Icons.apple,
+      'sandwich': Icons.lunch_dining,
+      'orange': Icons.eco,
+      'broccoli': Icons.grass,
+      'carrot': Icons.emoji_food_beverage,
+      'hot dog': Icons.fastfood,
+      'pizza': Icons.local_pizza,
+      'donut': Icons.donut_large,
+      'cake': Icons.cake,
+      'laptop': Icons.laptop,
+      'mouse': Icons.mouse,
+      'remote': Icons.tv,
+      'keyboard': Icons.keyboard,
+      'cell phone': Icons.phone_android,
+      'book': Icons.menu_book,
+      'clock': Icons.access_time,
+      'scissors': Icons.cut,
+      'teddy bear': Icons.child_care,
+      'hair drier': Icons.bathroom,
+      'toothbrush': Icons.brush
+    };
+    return switcher[title.toLowerCase()] ?? Icons.help_outline;
   }
 }
