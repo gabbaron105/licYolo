@@ -12,6 +12,7 @@ import json
 import logging
 from data_routes import data_bp
 from ignore_routes import ignore_bp
+from vision_routes import vision_bp  # Importuj blueprint vision_bp
 # Konfiguracja logowania
 logging.basicConfig(level=logging.DEBUG)
 
@@ -27,6 +28,7 @@ except Exception as e:
 
 app.register_blueprint(data_bp)
 app.register_blueprint(ignore_bp)
+app.register_blueprint(vision_bp)  # Zarejestruj blueprint vision_bp
 
 @app.route('/')
 def home():

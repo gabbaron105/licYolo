@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../components/custom_navbar.dart'; // Import the custom navigation bar
 import '../api_conf/DetectedItem.dart' as api; // Import the API service with alias
+import '../api_conf/Vision.dart'; // Import the Vision API service
 
 class DetailsPage extends StatefulWidget {
   final String itemId;
@@ -13,6 +14,7 @@ class DetailsPage extends StatefulWidget {
 
 class _DetailsPageState extends State<DetailsPage> {
   late Future<api.DetectedItem> itemDetails;
+  late Future<Map<String, dynamic>> visionData;
   int _currentIndex = 0;
 
   @override
@@ -25,6 +27,7 @@ class _DetailsPageState extends State<DetailsPage> {
     try {
       print('Fetching details for item ID: $itemId'); // Debug print
       final item = await api.ApiService.fetchItemDetails(itemId);
+      visionData = VisionService.analyzeImage(item.itemID);
       return item;
     } catch (e) {
       print('Failed to fetch item details: $e'); // Debug print
@@ -154,6 +157,41 @@ class _DetailsPageState extends State<DetailsPage> {
                                         bbox: itemDetails.bbox,
                                       ),
                                     ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  FutureBuilder<Map<String, dynamic>>(
+                    future: visionData,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return Center(child: Text('Failed to load vision data'));
+                      } else {
+                        final data = snapshot.data!;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 20.0), // Add padding from the top
+                          child: Center( // Center the entire card
+                            child: Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center, // Center the text
+                                  children: [
+                                    Text(
+                                      'AI Analysis:',
+                                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold), // Increase font size
+                                    ),
+                                    Text(
+                                      'Description: ${data['description']}',
+                                      style: TextStyle(fontSize: 18), // Increase font size
+                                    ), // Display description
                                   ],
                                 ),
                               ),

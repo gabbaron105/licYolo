@@ -1,7 +1,7 @@
 # Ignore YOLO model files
 **/yolo**.pt
 /back/main/yolo/
-
+.env
 
 # Ignore virtual environment folder
 /back/venv/
