@@ -156,8 +156,14 @@ def upload_frame():
         img_np = np.array(img_rgb)
 
         # ===== Wykonanie predykcji =====
-        results = model.predict(img_rgb, verbose=False)  # Model AI
-        detections = results[0].boxes.data.cpu().numpy()  # Przekształcenie wyników
+        results = model.predict(
+            img_rgb, 
+            verbose=False,
+            conf=0.5,
+            iou=0.45 ,
+            classes=[1, 15, 16, 24, 25, 26, 28, 39, 40, 41, 63, 64, 65, 67, 73, 76, 77, 78, 80, 81])  
+        
+        detections = results[0].boxes.data.cpu().numpy()  
 
         # ===== Filtrowanie wykryć =====
         detections = [d for d in detections if int(d[5]) not in ignored_classes]
