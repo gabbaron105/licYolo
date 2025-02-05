@@ -13,6 +13,8 @@ import logging
 from data_routes import data_bp
 from ignore_routes import ignore_bp
 from vision_routes import vision_bp  # Importuj blueprint vision_bp
+import time
+
 # Konfiguracja logowania
 logging.basicConfig(level=logging.DEBUG)
 
@@ -138,13 +140,14 @@ def load_ignored_classes():
         logging.error(f"Error loading ignored classes: {str(e)}")
     return []
 
-@app.route('/upload_frame', methods=['POST'])
+
+@app.route('/upload_frames', methods=['POST'])
 def upload_frame():
     if not request.data:
         logging.error("No data received")
         return jsonify({"error": "No data received"}), 400
 
-    img_bytes = request.data
+    img_bytes = request.data  # Otrzymane surowe dane
     ignored_classes = load_ignored_classes()
 
     try:
@@ -152,9 +155,11 @@ def upload_frame():
         img_rgb = img.convert("RGB")
         img_np = np.array(img_rgb)
 
-        results = model.predict(img_rgb, verbose=False)  # Wykonanie predykcji
-        detections = results[0].boxes.data.cpu().numpy()  # Wyniki jako numpy
+        # ===== Wykonanie predykcji =====
+        results = model.predict(img_rgb, verbose=False)  # Model AI
+        detections = results[0].boxes.data.cpu().numpy()  # Przekształcenie wyników
 
+        # ===== Filtrowanie wykryć =====
         detections = [d for d in detections if int(d[5]) not in ignored_classes]
 
         detection_list = []
@@ -163,6 +168,7 @@ def upload_frame():
 
         frame_count = len([name for name in os.listdir("wyniki") if name.endswith(".jpg")]) + 1
 
+        # ===== Przetwarzanie wykryć =====
         if len(detections) > 0:
             for detection in detections:
                 xmin, ymin, xmax, ymax, confidence, class_id = map(int, detection[:6])
@@ -172,33 +178,54 @@ def upload_frame():
                 color = get_dominant_color(img_np, bbox)
 
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                name = CLASS_NAMES.get(str(class_id), f"class_{class_id}")  # Pobranie nazwy z JSON
+                name = CLASS_NAMES.get(str(class_id), f"class_{class_id}")
 
                 detection_entry = {
                     "class": class_id,
                     "name": name,
                     "confidence": round(confidence, 2),
                     "bbox": bbox,
-                    "center": {
-                        "x": center_x,
-                        "y": center_y
-                    },
+                    "center": {"x": center_x, "y": center_y},
                     "color": color,
                     "timestamp": timestamp
                 }
                 detection_list.append(detection_entry)
 
-            with open("wyniki/general_detections.txt", "a", encoding="utf-8") as f:
-                f.write(f"Frame {frame_count}: {json.dumps(detection_list, ensure_ascii=False)}\n")
+            # ===== Zapisywanie wykryć do pliku =====
+                img_name = f"wyniki/frame_{frame_count}.jpg"
+                img.save(img_name)
+                logging.info(f"✅ Zapisano obraz jako: {img_name}")
 
-            img_name = f"wyniki/frame_{frame_count}.jpg"
-            img.save(img_name)
+                with open("wyniki/general_detections.txt", "a", encoding="utf-8") as f:
+                    f.write(f"Frame {frame_count}: {json.dumps(detection_list, ensure_ascii=False)}\n")
+                logging.info("✅ Wykrycia zapisane do general_detections.txt")
+                
+
+
 
         return jsonify({"detections": detection_list}), 200
 
     except Exception as e:
         logging.error(f"Error processing frame: {str(e)}")
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/upload_frames_test', methods=['POST'])
+def upload_frames():
+    try:
+        image_data = request.data  # Odczytanie bajtów obrazu
+
+        filename = f"wyniki/image_{int(time.time())}.jpg"
+
+        with open(filename, "wb") as file:
+            file.write(image_data)
+
+        print(f"📸 Otrzymano i zapisano obraz: {filename}")
+        return "OK", 200  # Zwrócenie statusu 200 (sukces)
+
+    except Exception as e:
+        print(f"❌ Błąd: {e}")
+        return "Błąd serwera", 500  # Zwrócenie statusu 500 w przypadku błędu
+
 
 
 
