@@ -155,13 +155,20 @@ def upload_frame():
         img_rgb = img.convert("RGB")
         img_np = np.array(img_rgb)
 
+        # ===== Wykrywanie krawędzi =====
+        gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+        edges = cv2.Canny(gray, 100, 200)
+        edges_bgr = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+        edges_bgr = cv2.bitwise_not(edges_bgr)  # Odwrócenie efektu wykrywania krawędzi
+        img_np = cv2.addWeighted(img_np, 0.8, edges_bgr, 0.2, 0)
+
         # ===== Wykonanie predykcji =====
         results = model.predict(
             img_rgb, 
             verbose=False,
             conf=0.5,
             iou=0.45 ,
-            classes=[1, 15, 16, 24, 25, 26, 28, 39, 40, 41, 63, 64, 65, 67, 73, 76, 77, 78, 80, 81])  
+            classes=[1,15,16,24,25,26,28,39,40,41,63,64,65,67,73,76,77,78,80,81])  
         
         detections = results[0].boxes.data.cpu().numpy()  
 
@@ -181,7 +188,7 @@ def upload_frame():
                 bbox = {"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax}
                 center_x = (xmin + xmax) // 2
                 center_y = (ymin + ymax) // 2
-                color = get_dominant_color(img_np, bbox)
+                color = get_dominant_color(img_rgb, bbox)  # Przywrócenie oryginalnych kolorów
 
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 name = CLASS_NAMES.get(str(class_id), f"class_{class_id}")
@@ -199,38 +206,53 @@ def upload_frame():
 
             # ===== Zapisywanie wykryć do pliku =====
                 img_name = f"wyniki/frame_{frame_count}.jpg"
-                img.save(img_name)
+                cv2.imwrite(img_name, img_np)
                 logging.info(f"✅ Zapisano obraz jako: {img_name}")
 
                 with open("wyniki/general_detections.txt", "a", encoding="utf-8") as f:
                     f.write(f"Frame {frame_count}: {json.dumps(detection_list, ensure_ascii=False)}\n")
                 logging.info("✅ Wykrycia zapisane do general_detections.txt")
                 
-
-
-
         return jsonify({"detections": detection_list}), 200
 
     except Exception as e:
         logging.error(f"Error processing frame: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
     
 @app.route('/upload_frames_test', methods=['POST'])
 def upload_frames():
+    if 'image' not in request.files:
+        return jsonify({"error": "No image provided"}), 400
+
+    file = request.files['image']
+    image = Image.open(file.stream).convert('RGB')
+    open_cv_image = np.array(image)
+    open_cv_image = open_cv_image[:, :, ::-1].copy()  # Convert RGB to BGR
+
+    # Convert to grayscale for edge detection
+    gray = cv2.cvtColor(open_cv_image, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 100, 200)  # Perform edge detection
+
+    # Convert edges to BGR so it can be merged with the original image
+    edges_bgr = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+
+    # Blend edges with the original image
+    result = cv2.addWeighted(open_cv_image, 0.8, edges_bgr, 0.2, 0)
+
+    # Simulate model processing (if needed, replace this with actual model call)
+    results = model(result)  # Assuming 'model' is defined somewhere
+    
     try:
-        image_data = request.data  # Odczytanie bajtów obrazu
-
         filename = f"wyniki/image_{int(time.time())}.jpg"
-
-        with open(filename, "wb") as file:
-            file.write(image_data)
-
-        print(f"📸 Otrzymano i zapisano obraz: {filename}")
-        return "OK", 200  # Zwrócenie statusu 200 (sukces)
-
+        cv2.imwrite(filename, result)
+        print(f"📸 Processed image saved: {filename}")
+        return jsonify({"message": "Image processed successfully", "saved_file": filename})
     except Exception as e:
-        print(f"❌ Błąd: {e}")
-        return "Błąd serwera", 500  # Zwrócenie statusu 500 w przypadku błędu
+        return jsonify({"error": str(e)}), 500
+
+
+
 
 
 
