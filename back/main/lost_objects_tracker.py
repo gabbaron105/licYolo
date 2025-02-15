@@ -105,7 +105,6 @@ def write_to_txt_file(output_file, data):
 
 def monitor_file(input_file, output_file, delta_color_threshold):
     tracker = ObjectTracker(delta_color_threshold=delta_color_threshold)
-    file_position = 0
 
     input_path = Path(input_file)
     output_path = Path(output_file)
@@ -118,31 +117,30 @@ def monitor_file(input_file, output_file, delta_color_threshold):
                 continue
 
             with input_path.open('r') as file:
-                file.seek(file_position)
-                new_lines = file.readlines()
-                file_position = file.tell()
+                lines = file.readlines()  # ZAWSZE czytamy cały plik od początku
 
-            print(f"[LOG] Read {len(new_lines)} new lines from input file.")
-            print(f"[LOG] Current file position: {file_position}")
+            print(f"[LOG] Read {len(lines)} lines from input file.")
 
-            frame_number = 0
-            for line in new_lines:
-                frame_number += 1
+            for line in lines:
                 try:
                     if ': ' in line:
-                        raw_data = line.strip().split(': ', 1)[1]
-                        fixed_data = fix_json_line(raw_data) 
-                        frame_data = json.loads(fixed_data)  
-                        tracker.process_frame(frame_data, frame_number) 
+                        frame_info, raw_data = line.strip().split(': ', 1)
+                        
+                        # Usuwamy "Frame " i zamieniamy na liczbę
+                        frame_number = int(frame_info.replace("Frame ", ""))  
+
+                        fixed_data = fix_json_line(raw_data)
+                        frame_data = json.loads(fixed_data)
+                        tracker.process_frame(frame_data, frame_number)  # Przekazujemy poprawny frame_number
                     else:
                         print(f"[WARNING] Invalid line format ignored: {line.strip()}")
-                except (json.JSONDecodeError, IndexError) as e:
+                except (json.JSONDecodeError, IndexError, ValueError) as e:
                     print(f"[ERROR] Error parsing line: {line.strip()} -> {e}")
 
-            # Usuń plik jeśli istnieje
+
             if output_path.exists():
                 try:
-                    output_path.unlink()
+                    output_path.unlink()  # Usuwamy stary plik wyjściowy
                 except Exception as e:
                     print(f"[ERROR] Failed to delete old output file: {e}")
                     continue  
@@ -157,7 +155,8 @@ def monitor_file(input_file, output_file, delta_color_threshold):
         except Exception as e:
             print(f"[ERROR] Unexpected error: {e}")
 
-        time.sleep(2)
+        time.sleep(2)  # Oczekiwanie przed kolejnym odczytem
+
 
 
 def ensure_directory_exists(file_path):

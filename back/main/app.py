@@ -37,11 +37,9 @@ def home():
     return "Flask server is running!"
 
 def get_dominant_color(image, bbox):
-    """
-    :param image: Obraz w formacie numpy (np. klatka z OpenCV)
-    :param bbox: Bounding box (słownik z 'xmin', 'ymin', 'xmax', 'ymax')
-    :return: Kolor w formacie heksadecymalnym (np. '#RRGGBB')
-    """
+    if isinstance(image, Image.Image):  
+        image = np.array(image)  # Konwersja PIL → numpy
+
     xmin, ymin, xmax, ymax = bbox['xmin'], bbox['ymin'], bbox['xmax'], bbox['ymax']
     region = image[ymin:ymax, xmin:xmax]
 
@@ -52,6 +50,7 @@ def get_dominant_color(image, bbox):
     mean_color = np.mean(region, axis=0).astype(int)
     r, g, b = mean_color[2], mean_color[1], mean_color[0]
     return f"#{r:02x}{g:02x}{b:02x}"
+
 
 @app.route('/detect_video', methods=['POST'])
 def detect_video():
@@ -227,7 +226,7 @@ def upload_frames():
 
     file = request.files['image']
     image = Image.open(file.stream).convert('RGB')
-    open_cv_image = np.array(image)
+    open_cv_image = np.array(image)  # Convert PIL image to numpy array
     open_cv_image = open_cv_image[:, :, ::-1].copy()  # Convert RGB to BGR
 
     # Convert to grayscale for edge detection
