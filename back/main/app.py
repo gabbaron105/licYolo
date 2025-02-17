@@ -130,14 +130,7 @@ def detect_video():
 with open("class_names.json", "r", encoding="utf-8") as f:
     CLASS_NAMES = json.load(f)
 
-def load_ignored_classes():
-    try:
-        if os.path.exists("./ignored_classes.json"):
-            with open("ignored_classes.json", "r", encoding="utf-8") as f:
-                return json.load(f).get("ignored_classes", [])
-    except Exception as e:
-        logging.error(f"Error loading ignored classes: {str(e)}")
-    return []
+
 
 
 @app.route('/upload_frames', methods=['POST'])
@@ -147,12 +140,13 @@ def upload_frame():
         return jsonify({"error": "No data received"}), 400
 
     img_bytes = request.data  # Otrzymane surowe dane
-    ignored_classes = load_ignored_classes()
-
     try:
         img = Image.open(io.BytesIO(img_bytes))
         img_rgb = img.convert("RGB")
         img_np = np.array(img_rgb)
+
+        # Kopia oryginalnego obrazu przed przekształceniami
+        original_np = img_np.copy()
 
         # ===== Wykrywanie krawędzi =====
         gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
@@ -161,33 +155,32 @@ def upload_frame():
         edges_bgr = cv2.bitwise_not(edges_bgr)  # Odwrócenie efektu wykrywania krawędzi
         img_np = cv2.addWeighted(img_np, 0.8, edges_bgr, 0.2, 0)
 
-        # ===== Wykonanie predykcji =====
+        # ===== Predykcja =====
         results = model.predict(
             img_rgb, 
             verbose=False,
             conf=0.5,
-            iou=0.45 ,
-            classes=[1,15,16,24,25,26,28,39,40,41,63,64,65,67,73,76,77,78,80,81])  
-        
-        detections = results[0].boxes.data.cpu().numpy()  
+            iou=0.45,
+            classes=[1,15,16,24,25,26,28,39,40,41,63,64,65,67,73,76,77,78,80,81]
+        )  
 
-        # ===== Filtrowanie wykryć =====
-        detections = [d for d in detections if int(d[5]) not in ignored_classes]
+        detections = results[0].boxes.data.cpu().numpy()
 
-        detection_list = []
+        # Tworzenie katalogu "wyniki" jeśli nie istnieje
         if not os.path.exists("wyniki"):
             os.makedirs("wyniki")
 
         frame_count = len([name for name in os.listdir("wyniki") if name.endswith(".jpg")]) + 1
 
         # ===== Przetwarzanie wykryć =====
+        detection_list = []
         if len(detections) > 0:
             for detection in detections:
                 xmin, ymin, xmax, ymax, confidence, class_id = map(int, detection[:6])
                 bbox = {"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax}
                 center_x = (xmin + xmax) // 2
                 center_y = (ymin + ymax) // 2
-                color = get_dominant_color(img_rgb, bbox)  # Przywrócenie oryginalnych kolorów
+                color = get_dominant_color(img_rgb, bbox)  
 
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 name = CLASS_NAMES.get(str(class_id), f"class_{class_id}")
@@ -204,15 +197,18 @@ def upload_frame():
                 detection_list.append(detection_entry)
 
             # ===== Zapisywanie wykryć do pliku =====
-                img_name = f"wyniki/frame_{frame_count}.jpg"
-                cv2.imwrite(img_name, img_np)
-                logging.info(f"✅ Zapisano obraz jako: {img_name}")
+            img_name = f"wyniki/frame_{frame_count}.jpg"
+            
+            # Zapisujemy ORYGINALNE zdjęcie zamiast przekształconego
+            cv2.imwrite(img_name, cv2.cvtColor(original_np, cv2.COLOR_RGB2BGR))
+            logging.info(f"✅ Zapisano oryginalny obraz jako: {img_name}")
 
-                with open("wyniki/general_detections.txt", "a", encoding="utf-8") as f:
-                    f.write(f"Frame {frame_count}: {json.dumps(detection_list, ensure_ascii=False)}\n")
-                logging.info("✅ Wykrycia zapisane do general_detections.txt")
-                
+            with open("wyniki/general_detections.txt", "a", encoding="utf-8") as f:
+                f.write(f"Frame {frame_count}: {json.dumps(detection_list, ensure_ascii=False)}\n")
+            logging.info("✅ Wykrycia zapisane do general_detections.txt")
+
         return jsonify({"detections": detection_list}), 200
+
 
     except Exception as e:
         logging.error(f"Error processing frame: {str(e)}")
