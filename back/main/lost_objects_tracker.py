@@ -150,12 +150,8 @@ def monitor_file(input_file, output_file, delta_color_threshold):
                 write_to_txt_file(output_file, all_objects)
 
                 # Pobierz aktualnie używane klatki
-                used_frames = {obj["frame"] for obj in all_objects.values() if "frame" in obj}
-
-                # **Usuwanie co 10 sekund, ale tylko jeśli klatka jest pusta**
-                if True:
-                    clean_unused_images('./wyniki/', used_frames, tracker)  # Przekazujemy tracker, żeby sprawdzać obiekty
-                    last_cleanup_time = time.time()  # Resetujemy licznik czasu
+                used_frames = {obj["frame"] for obj in all_objects.values() if "frame" in obj}                
+                clean_unused_images('./wyniki/', used_frames, tracker)  # Przekazujemy tracker, żeby sprawdzać obiekty
             except Exception as e:
                 print(f"[ERROR] Failed to write to output file: {e}")
                 continue  
