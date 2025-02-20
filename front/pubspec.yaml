@@ -27,6 +27,8 @@ environment:
 # dependencies can be manually updated by changing the version numbers below to
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
+
+
 dependencies:
   flutter:
     sdk: flutter
@@ -36,6 +38,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^0.13.4
   shared_preferences: ^2.0.13
+  flutter_tts: ^3.8.5
 
 
 dev_dependencies:

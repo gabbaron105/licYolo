@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../components/custom_navbar.dart'; // Import the custom navigation bar
-import '../api_conf/DetectedItem.dart' as api; // Import the API service with alias
-import '../api_conf/Vision.dart'; // Import the Vision API service
+import 'package:flutter_tts/flutter_tts.dart';
+import '../components/custom_navbar.dart';
+import '../api_conf/DetectedItem.dart' as api;
+import '../api_conf/Vision.dart';
 
 class DetailsPage extends StatefulWidget {
   final String itemId;
@@ -16,6 +17,7 @@ class _DetailsPageState extends State<DetailsPage> {
   late Future<api.DetectedItem> itemDetails;
   late Future<Map<String, dynamic>> visionData;
   int _currentIndex = 0;
+  final FlutterTts flutterTts = FlutterTts(); // Inicjalizacja TTS
 
   @override
   void initState() {
@@ -25,14 +27,28 @@ class _DetailsPageState extends State<DetailsPage> {
 
   Future<api.DetectedItem> fetchItemDetails(String itemId) async {
     try {
-      print('Fetching details for item ID: $itemId'); // Debug print
       final item = await api.ApiService.fetchItemDetails(itemId);
       visionData = VisionService.analyzeImage(item.itemID);
       return item;
     } catch (e) {
-      print('Failed to fetch item details: $e'); // Debug print
       throw Exception('Failed to fetch item details');
     }
+  }
+
+  Future<void> _speak(String text) async {
+    await flutterTts.setLanguage("en-US"); 
+    await flutterTts.setPitch(1.0);
+    await flutterTts.speak(text);
+  }
+
+  Future<String> _fetchFrameImageUrl(int frameNumber) async {
+    return await api.ApiService.fetchFrameImage(frameNumber);
+  }
+
+  @override
+  void dispose() {
+    flutterTts.stop();
+    super.dispose();
   }
 
   @override
@@ -53,155 +69,152 @@ class _DetailsPageState extends State<DetailsPage> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
-            print('Error: ${snapshot.error}'); // Debug print
             return Center(child: Text('Failed to load item details'));
           } else if (!snapshot.hasData) {
             return Center(child: Text('Item not found'));
           } else {
             final itemDetails = snapshot.data!;
-            print('Item details: $itemDetails'); // Debug print
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Text(
-                      itemDetails.name,
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    elevation: 3,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                'Color: ${itemDetails.color}',
-                                style: TextStyle(fontSize: 16),
-                              ),
-                              SizedBox(width: 8),
-                              Container(
-                                width: 16,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: _getColorFromHex(itemDetails.color),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            'Timestamp: ${itemDetails.timestamp}',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                          Text(
-                            'Frame: ${itemDetails.frame}',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ],
+            return SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Text(
+                        itemDetails.name,
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 20),
-                  FutureBuilder<String>(
-                    future: _fetchFrameImageUrl(itemDetails.frame),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError) {
-                        print('Error loading image: ${snapshot.error}');
-                        return Center(child: Text('Failed to load image'));
-                      } else {
-                        return Container(
-                          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.grey.shade300,
-                              width: 1.5,
+                    SizedBox(height: 20),
+                    Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 3,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'Color: ${itemDetails.color}',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                                SizedBox(width: 8),
+                                Container(
+                                  width: 16,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: _getColorFromHex(itemDetails.color),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ],
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.2),
-                                spreadRadius: 1,
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
+                            Text('Timestamp: ${itemDetails.timestamp}', style: TextStyle(fontSize: 16)),
+                            Text('Frame: ${itemDetails.frame}', style: TextStyle(fontSize: 16)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    FutureBuilder<String>(
+                      future: _fetchFrameImageUrl(itemDetails.frame),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return Center(child: CircularProgressIndicator());
+                        } else if (snapshot.hasError || !snapshot.hasData) {
+                          return Center(child: Text('Failed to load image'));
+                        } else {
+                          return Container(
+                            margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.grey.shade300,
+                                width: 1.5,
                               ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: AspectRatio(
-                              aspectRatio: 800 / 600, // Match your image dimensions
-                              child: Container(
-                                padding: EdgeInsets.all(8),
-                                child: Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    Image.network(
-                                      snapshot.data!,
-                                      fit: BoxFit.contain,
-                                    ),
-                                    CustomPaint(
-                                      painter: BoundingBoxPainter(
-                                        bbox: itemDetails.bbox,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.2),
+                                  spreadRadius: 1,
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: AspectRatio(
+                                aspectRatio: 800 / 600, // Match your image dimensions
+                                child: Container(
+                                  padding: EdgeInsets.all(8),
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      Image.network(
+                                        snapshot.data!,
+                                        fit: BoxFit.contain,
                                       ),
-                                    ),
-                                  ],
+                                      CustomPaint(
+                                        painter: BoundingBoxPainter(
+                                          bbox: itemDetails.bbox,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                  FutureBuilder<Map<String, dynamic>>(
-                    future: visionData,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError) {
-                        return Center(child: Text('Failed to load vision data'));
-                      } else {
-                        final data = snapshot.data!;
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 20.0), // Add padding from the top
-                          child: Center( // Center the entire card
-                            child: Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.center, // Center the text
-                                  children: [
-                                    Text(
-                                      'AI Analysis:',
-                                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold), // Increase font size
-                                    ),
-                                    Text(
-                                      'Description: ${data['description']}',
-                                      style: TextStyle(fontSize: 18), // Increase font size
-                                    ), // Display description
-                                  ],
+                          );
+                        }
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    FutureBuilder<Map<String, dynamic>>(
+                      future: visionData,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return Center(child: CircularProgressIndicator());
+                        } else if (snapshot.hasError) {
+                          return Center(child: Text('Failed to load vision data'));
+                        } else {
+                          final data = snapshot.data!;
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 20.0),
+                            child: Center(
+                              child: Card(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'AI Analysis:',
+                                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                      ),
+                                      GestureDetector(
+                                        onTap: () => _speak(data['summary']),
+                                        child: Text(
+                                          'Description: ${data['summary']}',
+                                          style: TextStyle(fontSize: 18, color: Colors.black),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ],
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -227,12 +240,6 @@ class _DetailsPageState extends State<DetailsPage> {
       return Color(int.parse("0x$hexColor"));
     }
     return Colors.black;
-  }
-
-  Future<String> _fetchFrameImageUrl(int frameNumber) async {
-    final url = '${api.ApiService.baseUrl}/get-frame/$frameNumber';
-    print('Fetching frame image URL: $url'); // Debug print
-    return url;
   }
 }
 

@@ -16,8 +16,13 @@ def analyze_object(object_name):
     image_path = f"./wyniki/frame_{frame_number}.jpg"
 
     result = analyze_image(image_path, f"{object_name}: {json.dumps(object_data)}")
-    
+
     if "error" in result:
         return jsonify(result), 500
     else:
-        return jsonify(result), 200
+        # Sprawdzamy, czy 'summary' istnieje w wyniku. Jeśli nie, dodajemy pusty string.
+        summary = result.get("summary", "")  # Kluczowa zmiana
+
+        return jsonify({
+            "summary": summary  # Zwracamy summary (nawet puste)
+        }), 200
