@@ -43,27 +43,27 @@ class ObjectTracker:
 
     def process_frame(self, frame_data, frame_number):
         
-        print(f"[LOG] Processing frame {frame_number}: {frame_data}")
+        #print(f"[LOG] Processing frame {frame_number}: {frame_data}")
         for obj in frame_data:
             obj_class = obj.get('name')
             obj_color = obj.get('color')
 
             if not obj_class or not obj_color:
-                print("[WARNING] Object without 'name' or 'color' ignored.")
+                #print("[WARNING] Object without 'name' or 'color' ignored.")
                 continue
 
             matched = False
             for existing_name, existing_obj in self.objects.items():
                 if existing_name.startswith(obj_class):  
                     if self.is_similar_color(existing_obj['color'], obj_color): 
-                        print(f"[DEBUG] Match found: {existing_name} for color {obj_color}")
+                        #print(f"[DEBUG] Match found: {existing_name} for color {obj_color}")
                         obj['frame'] = frame_number
                         self.objects[existing_name] = obj
                         matched = True
                         break
 
             if not matched:
-                print(f"[DEBUG] No match for object {obj_class} with color {obj_color}")
+                #print(f"[DEBUG] No match for object {obj_class} with color {obj_color}")
                 new_object_name = self.generate_object_name(obj_class)
                 obj['frame'] = frame_number
                 self.objects[new_object_name] = obj
@@ -119,7 +119,7 @@ def monitor_file(input_file, output_file, delta_color_threshold):
             with input_path.open('r') as file:
                 lines = file.readlines()  # ZAWSZE czytamy cały plik od początku
 
-            print(f"[LOG] Read {len(lines)} lines from input file.")
+            #print(f"[LOG] Read {len(lines)} lines from input file.")
 
             for line in lines:
                 try:
@@ -148,6 +148,14 @@ def monitor_file(input_file, output_file, delta_color_threshold):
             all_objects = tracker.get_all_objects()
             try:
                 write_to_txt_file(output_file, all_objects)
+
+                # Pobierz aktualnie używane klatki
+                used_frames = {obj["frame"] for obj in all_objects.values() if "frame" in obj}
+
+                # **Usuwanie co 10 sekund, ale tylko jeśli klatka jest pusta**
+                if True:
+                    clean_unused_images('./wyniki/', used_frames, tracker)  # Przekazujemy tracker, żeby sprawdzać obiekty
+                    last_cleanup_time = time.time()  # Resetujemy licznik czasu
             except Exception as e:
                 print(f"[ERROR] Failed to write to output file: {e}")
                 continue  
@@ -156,6 +164,58 @@ def monitor_file(input_file, output_file, delta_color_threshold):
             print(f"[ERROR] Unexpected error: {e}")
 
         time.sleep(2)  # Oczekiwanie przed kolejnym odczytem
+
+import os
+
+def clean_unused_images(image_folder, used_frames, object_tracker):
+    """
+    Usuwa obrazy `./wyniki/frame_x`, jeśli klatka nie jest już używana, 
+    jest starsza niż 10 klatek od najnowszej i nie zawiera żadnych obiektów.
+
+    :param image_folder: Folder, w którym znajdują się obrazy.
+    :param used_frames: Zestaw klatek, które powinny pozostać.
+    :param object_tracker: Instancja `ObjectTracker`, do sprawdzenia obiektów na klatkach.
+    """
+    try:
+        if not os.path.exists(image_folder):
+            print(f"[WARNING] Folder {image_folder} nie istnieje. Pomijam czyszczenie.")
+            return
+
+        if not used_frames:
+            print(f"[WARNING] Brak klatek w `used_frames`. Pomijam czyszczenie.")
+            return
+
+        max_used_frame = max(used_frames)  # Najnowsza używana klatka
+        safe_threshold = max_used_frame - 10  # Nie usuwamy klatek nowszych niż (max - 10)
+
+        print(f"[LOG] Maksymalna używana klatka: {max_used_frame}, Usuwamy starsze niż: {safe_threshold}")
+
+        for frame_number in range(safe_threshold):  # Sprawdzamy tylko starsze klatki
+            frame_path = os.path.join(image_folder, f"frame_{frame_number}.jpg")
+
+            # Sprawdź, czy na tej klatce są jakieś obiekty
+            has_objects = any(obj["frame"] == frame_number for obj in object_tracker.objects.values())
+
+            # Usuwamy, jeśli:
+            # 1. Nie ma jej w `used_frames`
+            # 2. Jest starsza niż `safe_threshold`
+            # 3. Nie zawiera obiektów
+            if frame_number not in used_frames and not has_objects:
+                if os.path.exists(frame_path):
+                    try:
+                        os.remove(frame_path)
+                        print(f"[LOG] Usunięto zbędny obraz: {frame_path}")
+                    except Exception as e:
+                        print(f"[ERROR] Nie udało się usunąć {frame_path}: {e}")
+                else:
+                    print(f"[WARNING] Plik {frame_path} nie istnieje.")
+            else:
+                print(f"[DEBUG] Nie usuwam frame_{frame_number} - "
+                      f"{'jest w used_frames' if frame_number in used_frames else ''} "
+                      f"{'ma obiekty' if has_objects else ''}".strip())
+
+    except Exception as e:
+        print(f"[ERROR] Błąd podczas czyszczenia obrazów: {e}")
 
 
 

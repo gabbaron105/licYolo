@@ -50,6 +50,20 @@ def get_dominant_color(image, bbox):
     mean_color = np.mean(region, axis=0).astype(int)
     r, g, b = mean_color[2], mean_color[1], mean_color[0]
     return f"#{r:02x}{g:02x}{b:02x}"
+def get_next_frame_number(directory="wyniki"):
+    # Pobierz listę wszystkich plików frame_*.jpg
+    frame_files = [f for f in os.listdir(directory) if f.startswith("frame_") and f.endswith(".jpg")]
+    
+    if not frame_files:
+        return 1  # Jeśli folder jest pusty, rozpoczynamy od 1
+    
+    # Znajdź najwyższy numer frame w folderze
+    max_frame_number = max([int(f.split("_")[1].split(".")[0]) for f in frame_files])
+    return max_frame_number + 1  # Zwiększ numer o 1
+
+# W kodzie zapisz nową klatkę:
+frame_count = get_next_frame_number("wyniki")
+
 
 
 @app.route('/detect_video', methods=['POST'])
@@ -197,6 +211,7 @@ def upload_frame():
                 detection_list.append(detection_entry)
 
             # ===== Zapisywanie wykryć do pliku =====
+            frame_count = get_next_frame_number("./wyniki/")
             img_name = f"wyniki/frame_{frame_count}.jpg"
             
             # Zapisujemy ORYGINALNE zdjęcie zamiast przekształconego
